@@ -345,7 +345,7 @@ function openLinkCardDialog(editor, assetBaseUrl) {
     void assetBaseUrl;
 }
 function toggleEditorFullscreen(root, editor) {
-    if (typeof editor?.execCommand === "function") {
+    if (!editor?.settings?.inline && typeof editor?.execCommand === "function") {
         editor.execCommand("mceFullScreen");
         return;
     }

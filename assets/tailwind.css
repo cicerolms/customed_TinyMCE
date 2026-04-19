@@ -228,4 +228,48 @@
   body.cms-app .classic-editor-fragment img[data-wp-preserve] {
     display: none !important;
   }
+
+  body.cms-app.editor-fullscreen-active {
+    overflow: hidden;
+  }
+
+  body.cms-app [data-classic-editor].is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 1rem;
+    background: rgba(248, 250, 252, 0.98);
+    backdrop-filter: blur(8px);
+  }
+
+  body.cms-app [data-classic-editor].is-fullscreen .wp-editor-tools,
+  body.cms-app [data-classic-editor].is-fullscreen .classic-editor-toolbar-host {
+    flex: 0 0 auto;
+  }
+
+  body.cms-app [data-classic-editor].is-fullscreen .wp-editor-wrap,
+  body.cms-app [data-classic-editor].is-fullscreen .classic-editor-shell-wrap,
+  body.cms-app [data-classic-editor].is-fullscreen .wp-editor-container,
+  body.cms-app [data-classic-editor].is-fullscreen .classic-editor-shell-container {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  body.cms-app [data-classic-editor].is-fullscreen .classic-editor-fragment,
+  body.cms-app [data-classic-editor].is-fullscreen .wp-editor-area,
+  body.cms-app [data-classic-editor].is-fullscreen .classic-editor-panel textarea {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+  }
+
+  body.cms-app [data-classic-editor].is-fullscreen .cms-field__hint {
+    display: none;
+  }
 }
