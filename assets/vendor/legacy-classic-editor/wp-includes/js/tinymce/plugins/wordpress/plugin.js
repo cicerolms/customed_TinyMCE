@@ -139,6 +139,9 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 
 			if ( event.content.indexOf( '<script' ) !== -1 || event.content.indexOf( '<style' ) !== -1 ) {
 				event.content = event.content.replace( /<(script|style)[^>]*>[\s\S]*?<\/\1>/g, function( match, tag ) {
+					if ( tag === 'style' && editor.inline ) {
+						return match;
+					}
 					return '<img ' +
 						'src="' + tinymce.Env.transparentSrc + '" ' +
 						'data-wp-preserve="' + encodeURIComponent( match ) + '" ' +
