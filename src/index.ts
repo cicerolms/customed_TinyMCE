@@ -99,6 +99,7 @@ type WindowWithEditor = Window & typeof globalThis & {
   tinymce?: LegacyTinyMce;
   wp?: Record<string, unknown>;
   wpActiveEditor?: string;
+  classicEditorActiveId?: string;
   __i18n?: I18nApi;
   htmx?: HtmxApi;
   getUserSetting?: (name: string, fallback?: string) => string;
@@ -314,17 +315,17 @@ export function dispatchClassicEditorI18n(nextI18n: ClassicEditorI18nConfig): vo
 
 function defaultContentCssUrls(assetBaseUrl: string): string[] {
   return [
-    `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
-    `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
-    `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
+    `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
+    `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
+    `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
     "/styles.css",
   ];
 }
 
 function legacyPluginSources(assetBaseUrl: string): Record<string, string> {
-  const tinyMceBase = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
-  const tadvBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/tinymce-advanced`;
-  const vecbBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons`;
+  const tinyMceBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
+  const tadvBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/tinymce-advanced`;
+  const vecbBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons`;
   return {
     advlist: `${tadvBase}/mce/advlist/plugin.min.js`,
     anchor: `${tadvBase}/mce/anchor/plugin.min.js`,
@@ -421,7 +422,7 @@ function resolveEditorBodyClass(profile: EditorStyleProfile): string {
     .join(" ");
 }
 
-function ensureLegacyWpGlobals(win: WindowWithEditor): void {
+function ensureLegacyEditorGlobals(win: WindowWithEditor): void {
   if (typeof win.getUserSetting !== "function") {
     win.getUserSetting = (name: string, fallback = "") => window.localStorage.getItem(`classic-editor-user-setting:${name}`) ?? fallback;
   }
@@ -457,8 +458,8 @@ async function waitForLegacyTinyMce(assetBaseUrl: string): Promise<LegacyTinyMce
     const win = window as WindowWithEditor;
     if (win.tinymce) return win.tinymce;
 
-    ensureLegacyWpGlobals(win);
-    const tinyMceBaseUrl = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
+    ensureLegacyEditorGlobals(win);
+    const tinyMceBaseUrl = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
     await loadScript(`${tinyMceBaseUrl}/wp-tinymce.js`);
     if (!win.tinymce) {
       throw new Error("Legacy TinyMCE did not initialize");
@@ -732,10 +733,10 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   const assetBaseUrl = getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL);
   const visualTab = target.querySelector('[data-editor-tab="visual"]');
   const codeTab = target.querySelector('[data-editor-tab="code"]');
-  const wrap = target.querySelector(".wp-editor-wrap");
+  const wrap = target.querySelector(".classic-editor-shell-wrap, .wp-editor-wrap");
 
   if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement) || !(wrap instanceof HTMLElement)) {
-    throw new Error("Classic editor target is missing the legacy WP wrapper structure.");
+    throw new Error("Classic editor target is missing the legacy editor wrapper structure.");
   }
 
   const profileStack: EditorStyleProfile[] = [
@@ -865,6 +866,7 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
       });
       instance.on("focus", () => {
         (window as WindowWithEditor).wpActiveEditor = editorId;
+        (window as WindowWithEditor).classicEditorActiveId = editorId;
       });
       instance.on("init", () => {
         localizeLegacyMenubar(instance, activeI18n);

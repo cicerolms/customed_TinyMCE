@@ -199,16 +199,16 @@ export function dispatchClassicEditorI18n(nextI18n) {
 }
 function defaultContentCssUrls(assetBaseUrl) {
     return [
-        `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
-        `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
-        `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
+        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
+        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
+        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
         "/styles.css",
     ];
 }
 function legacyPluginSources(assetBaseUrl) {
-    const tinyMceBase = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
-    const tadvBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/tinymce-advanced`;
-    const vecbBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons`;
+    const tinyMceBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
+    const tadvBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/tinymce-advanced`;
+    const vecbBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons`;
     return {
         advlist: `${tadvBase}/mce/advlist/plugin.min.js`,
         anchor: `${tadvBase}/mce/anchor/plugin.min.js`,
@@ -296,7 +296,7 @@ function resolveEditorBodyClass(profile) {
         .filter(Boolean)
         .join(" ");
 }
-function ensureLegacyWpGlobals(win) {
+function ensureLegacyEditorGlobals(win) {
     if (typeof win.getUserSetting !== "function") {
         win.getUserSetting = (name, fallback = "") => window.localStorage.getItem(`classic-editor-user-setting:${name}`) ?? fallback;
     }
@@ -329,8 +329,8 @@ async function waitForLegacyTinyMce(assetBaseUrl) {
         const win = window;
         if (win.tinymce)
             return win.tinymce;
-        ensureLegacyWpGlobals(win);
-        const tinyMceBaseUrl = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
+        ensureLegacyEditorGlobals(win);
+        const tinyMceBaseUrl = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
         await loadScript(`${tinyMceBaseUrl}/wp-tinymce.js`);
         if (!win.tinymce) {
             throw new Error("Legacy TinyMCE did not initialize");
@@ -585,9 +585,9 @@ export async function createClassicEditor(config) {
     const assetBaseUrl = getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL);
     const visualTab = target.querySelector('[data-editor-tab="visual"]');
     const codeTab = target.querySelector('[data-editor-tab="code"]');
-    const wrap = target.querySelector(".wp-editor-wrap");
+    const wrap = target.querySelector(".classic-editor-shell-wrap, .wp-editor-wrap");
     if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement) || !(wrap instanceof HTMLElement)) {
-        throw new Error("Classic editor target is missing the legacy WP wrapper structure.");
+        throw new Error("Classic editor target is missing the legacy editor wrapper structure.");
     }
     const profileStack = [
         {
@@ -711,6 +711,7 @@ export async function createClassicEditor(config) {
             });
             instance.on("focus", () => {
                 window.wpActiveEditor = editorId;
+                window.classicEditorActiveId = editorId;
             });
             instance.on("init", () => {
                 localizeLegacyMenubar(instance, activeI18n);

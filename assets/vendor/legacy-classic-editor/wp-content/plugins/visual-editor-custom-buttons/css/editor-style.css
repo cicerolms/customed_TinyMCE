@@ -119,7 +119,9 @@ margin-bottom:0
 }
 .box-blue-title:before {
     content: "";
-    background: url("https://www.vietwork.jp/wp-content/themes/HRnavi/images/icon_question.png") left top / contain no-repeat;
+    background: none;
+    border: 2px solid currentColor;
+    border-radius: 999px;
     display: inline-block;
     width: 20px;
     height: 20px;
@@ -311,6 +313,5 @@ p{
 a {
     color: #DE562C;
 }
-
 
 

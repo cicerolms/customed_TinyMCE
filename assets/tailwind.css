@@ -134,31 +134,39 @@
     @apply mx-auto mt-3 min-h-5 max-w-shell text-[13px] text-[#0b5f4e];
   }
 
+  body.cms-app .classic-editor.legacy-classic-editor,
   body.cms-app .classic-editor.legacy-wp-editor {
     @apply mb-2 rounded-[10px] border border-[#d6dbe6];
   }
 
+  body.cms-app .classic-editor-toolbar,
   body.cms-app .wp-editor-tools {
     @apply flex items-center justify-between border-b border-[#e5e8ee] bg-[#f5f7fc] p-2;
   }
 
+  body.cms-app .classic-editor-media-buttons,
   body.cms-app .wp-media-buttons,
+  body.cms-app .classic-editor-tabs,
   body.cms-app .wp-editor-tabs {
     @apply flex items-center gap-2;
   }
 
+  body.cms-app .classic-editor-media-buttons .insert-media,
   body.cms-app .wp-media-buttons .insert-media {
     @apply rounded-lg border border-slate-400 bg-white px-3 py-2 text-slate-900;
   }
 
+  body.cms-app .classic-editor-toggle,
   body.cms-app .wp-switch-editor {
     @apply rounded-lg border border-slate-400 bg-white px-2.5 py-1.5 text-slate-700;
   }
 
+  body.cms-app .classic-editor-toggle[aria-pressed="true"],
   body.cms-app .wp-switch-editor[aria-pressed="true"] {
     @apply border-brand-700 bg-brand-700 text-white;
   }
 
+  body.cms-app .classic-editor-shell-container,
   body.cms-app .wp-editor-container {
     @apply grid gap-0;
   }
@@ -171,11 +179,13 @@
     display: none;
   }
 
+  body.cms-app .classic-editor-area,
   body.cms-app .wp-editor-area,
   body.cms-app .classic-editor-panel textarea {
     @apply min-h-[520px] w-full resize-y rounded-none border-0;
   }
 
+  body.cms-app .classic-editor-area:focus,
   body.cms-app .wp-editor-area:focus,
   body.cms-app .classic-editor-panel textarea:focus {
     outline: none;
