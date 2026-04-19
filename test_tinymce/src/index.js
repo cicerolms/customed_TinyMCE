@@ -88,6 +88,12 @@ function resolveSharedBaseCss(profile = {}) {
     .join("\n\n");
 }
 
+function resolveEditorSelfCss(profile = {}) {
+  return [profile.css?.self]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n\n");
+}
+
 function resolveExtendedCss(profile = {}) {
   return [profile.css?.extend, profile.contentStyle, profile.inlineCss]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -685,6 +691,14 @@ export default {
       if (pathname === "/editor-style-profile.css" && request.method === "GET") {
         const styleProfile = await loadEditorStyleProfile(env, request);
         return new Response(resolveProfileCss(styleProfile), {
+          status: 200,
+          headers: CSS_HEADERS,
+        });
+      }
+
+      if (pathname === "/editor-style-self.css" && request.method === "GET") {
+        const styleProfile = await loadEditorStyleProfile(env, request);
+        return new Response(resolveEditorSelfCss(styleProfile), {
           status: 200,
           headers: CSS_HEADERS,
         });
