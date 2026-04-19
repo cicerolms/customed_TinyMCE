@@ -1,34 +1,9 @@
+import { defaultLegacyContentCssUrls, ensureLegacyEditorGlobals, LEGACY_EDITOR_VERSION, LEGACY_INSERT_MENU_ITEMS, LEGACY_PLUGINS, LEGACY_TOOLBAR_1, LEGACY_WORDPRESS_ADV_HIDDEN, legacyPluginSources, legacyTinyMceBaseUrl, markLegacyActiveEditor, resolveLegacyEditorWrap, } from "./legacy-adapter.js";
 const DEFAULT_ASSET_BASE_URL = "/assets";
-const LEGACY_EDITOR_VERSION = "20260419-classic-editor-shell-v1";
-const LEGACY_TOOLBAR_1 = "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,classiceditorlinkcard,forecolor,table,classiceditorfullscreen";
 const LEGACY_VECB_PLUGIN_NAMES = Array.from({ length: 18 }, (_, index) => `vecb_button${index + 1}`);
 const LEGACY_UTILITY_BUTTON_NAMES = Array.from({ length: 5 }, (_, index) => `utility_${index + 1}`);
 const LEGACY_TOOLBAR_2 = [...LEGACY_VECB_PLUGIN_NAMES, ...LEGACY_UTILITY_BUTTON_NAMES].join(",");
-const LEGACY_PLUGINS = [
-    "charmap",
-    "colorpicker",
-    "hr",
-    "lists",
-    "link",
-    "paste",
-    "tabfocus",
-    "textcolor",
-    "wordpress",
-    "advlist",
-    "anchor",
-    "code",
-    "fullscreen",
-    "insertdatetime",
-    "media",
-    "nonbreaking",
-    "print",
-    "searchreplace",
-    "table",
-    "visualblocks",
-    "visualchars",
-    "wptadv",
-    ...LEGACY_VECB_PLUGIN_NAMES,
-].join(",");
+const LEGACY_PLUGIN_LIST = [LEGACY_PLUGINS, ...LEGACY_VECB_PLUGIN_NAMES].join(",");
 const DEFAULT_EDITOR_STYLE_PROFILE = {
     bodyClass: "cms-editor-content",
     blockFormats: "Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre",
@@ -197,38 +172,6 @@ export function dispatchClassicEditorI18n(nextI18n) {
     }
     document.dispatchEvent(new CustomEvent("classic-editor:i18n-change", { detail: nextI18n }));
 }
-function defaultContentCssUrls(assetBaseUrl) {
-    return [
-        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
-        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
-        `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
-        "/styles.css",
-    ];
-}
-function legacyPluginSources(assetBaseUrl) {
-    const tinyMceBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
-    const tadvBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/tinymce-advanced`;
-    const vecbBase = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-content/plugins/visual-editor-custom-buttons`;
-    return {
-        advlist: `${tadvBase}/mce/advlist/plugin.min.js`,
-        anchor: `${tadvBase}/mce/anchor/plugin.min.js`,
-        code: `${tadvBase}/mce/code/plugin.min.js`,
-        fullscreen: `${tinyMceBase}/plugins/fullscreen/plugin.min.js`,
-        insertdatetime: `${tadvBase}/mce/insertdatetime/plugin.min.js`,
-        media: `${tinyMceBase}/plugins/media/plugin.min.js`,
-        nonbreaking: `${tadvBase}/mce/nonbreaking/plugin.min.js`,
-        print: `${tadvBase}/mce/print/plugin.min.js`,
-        searchreplace: `${tadvBase}/mce/searchreplace/plugin.min.js`,
-        table: `${tadvBase}/mce/table/plugin.min.js`,
-        visualblocks: `${tadvBase}/mce/visualblocks/plugin.min.js`,
-        visualchars: `${tadvBase}/mce/visualchars/plugin.min.js`,
-        wptadv: `${tadvBase}/mce/wptadv/plugin.min.js`,
-        ...Object.fromEntries(LEGACY_VECB_PLUGIN_NAMES.map((name, index) => [
-            name,
-            `${vecbBase}/js/button-1-${index + 1}.js`,
-        ])),
-    };
-}
 function normalizeCssUrl(url) {
     return url.trim();
 }
@@ -296,19 +239,6 @@ function resolveEditorBodyClass(profile) {
         .filter(Boolean)
         .join(" ");
 }
-function ensureLegacyEditorGlobals(win) {
-    if (typeof win.getUserSetting !== "function") {
-        win.getUserSetting = (name, fallback = "") => window.localStorage.getItem(`classic-editor-user-setting:${name}`) ?? fallback;
-    }
-    if (typeof win.setUserSetting !== "function") {
-        win.setUserSetting = (name, value) => {
-            window.localStorage.setItem(`classic-editor-user-setting:${name}`, String(value));
-            return value;
-        };
-    }
-    win.wp = win.wp || {};
-    win.wp.editor = win.wp.editor || {};
-}
 async function loadScript(url) {
     const response = await fetch(`${url}?v=${LEGACY_EDITOR_VERSION}`, {
         cache: "no-store",
@@ -330,7 +260,7 @@ async function waitForLegacyTinyMce(assetBaseUrl) {
         if (win.tinymce)
             return win.tinymce;
         ensureLegacyEditorGlobals(win);
-        const tinyMceBaseUrl = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce`;
+        const tinyMceBaseUrl = legacyTinyMceBaseUrl(assetBaseUrl);
         await loadScript(`${tinyMceBaseUrl}/wp-tinymce.js`);
         if (!win.tinymce) {
             throw new Error("Legacy TinyMCE did not initialize");
@@ -352,7 +282,7 @@ async function loadLegacyPluginScripts(tinymce, assetBaseUrl) {
         return cached;
     }
     const promise = (async () => {
-        const pluginSources = legacyPluginSources(assetBaseUrl);
+        const pluginSources = legacyPluginSources(assetBaseUrl, LEGACY_VECB_PLUGIN_NAMES);
         for (const [name, source] of Object.entries(pluginSources)) {
             const basePath = source
                 .replace(/\/plugin(?:\.min)?\.js$/, "")
@@ -585,14 +515,14 @@ export async function createClassicEditor(config) {
     const assetBaseUrl = getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL);
     const visualTab = target.querySelector('[data-editor-tab="visual"]');
     const codeTab = target.querySelector('[data-editor-tab="code"]');
-    const wrap = target.querySelector(".classic-editor-shell-wrap, .wp-editor-wrap");
+    const wrap = resolveLegacyEditorWrap(target);
     if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement) || !(wrap instanceof HTMLElement)) {
         throw new Error("Classic editor target is missing the legacy editor wrapper structure.");
     }
     const profileStack = [
         {
             ...DEFAULT_EDITOR_STYLE_PROFILE,
-            contentCssUrls: defaultContentCssUrls(assetBaseUrl),
+            contentCssUrls: defaultLegacyContentCssUrls(assetBaseUrl),
         },
     ];
     if (styleProfileUrl) {
@@ -651,20 +581,20 @@ export async function createClassicEditor(config) {
         toolbar2: LEGACY_TOOLBAR_2,
         toolbar3: "",
         toolbar4: "",
-        plugins: LEGACY_PLUGINS,
+        plugins: LEGACY_PLUGIN_LIST,
         block_formats: resolvedProfile.blockFormats || DEFAULT_EDITOR_STYLE_PROFILE.blockFormats,
         fontsize_formats: "8pt 10pt 12pt 14pt 18pt 24pt 36pt",
         content_css: contentCssUrls,
         ...(contentStyle ? { content_style: contentStyle } : {}),
         body_class: editorBodyClass,
-        wordpress_adv_hidden: false,
+        wordpress_adv_hidden: LEGACY_WORDPRESS_ADV_HIDDEN,
         table_toolbar: false,
         table_responsive_width: true,
         menu: {
             file: { title: translate("editor.menu.file", "ファイル", activeI18n), items: "newdocument | print" },
             edit: { title: translate("editor.menu.edit", "編集", activeI18n), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
             view: { title: translate("editor.menu.view", "表示", activeI18n), items: "code | visualaid visualchars visualblocks | fullscreen" },
-            insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | classiceditoraddmedia wp_more wp_page" },
+            insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: LEGACY_INSERT_MENU_ITEMS },
             format: { title: translate("editor.menu.format", "フォーマット", activeI18n), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
             tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "code" },
             table: { title: translate("editor.menu.table", "テーブル", activeI18n), items: "inserttable tableprops deletetable | row column cell" },
@@ -710,8 +640,7 @@ export async function createClassicEditor(config) {
                 });
             });
             instance.on("focus", () => {
-                window.wpActiveEditor = editorId;
-                window.classicEditorActiveId = editorId;
+                markLegacyActiveEditor(window, editorId);
             });
             instance.on("init", () => {
                 localizeLegacyMenubar(instance, activeI18n);
