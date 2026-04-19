@@ -15,6 +15,7 @@ export type EditorStyleProfile = {
     bodyClass?: string;
     blockFormats?: string;
     contentStyle?: string;
+    extendCssUrl?: string;
     css?: EditorStyleProfileCss;
 };
 export type ClassicEditorConfig = {

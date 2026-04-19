@@ -34,6 +34,7 @@ const DEFAULT_EDITOR_STYLE_PROFILE = {
     contentCssUrls: [],
     inlineCss: "",
     contentStyle: "",
+    extendCssUrl: "",
     css: {
         self: "",
         base: "",
@@ -253,6 +254,9 @@ async function loadStyleProfile(profileUrl) {
     }
     if (typeof profile.blockFormats === "string") {
         next.blockFormats = profile.blockFormats;
+    }
+    if (typeof profile.extendCssUrl === "string") {
+        next.extendCssUrl = profile.extendCssUrl;
     }
     if (typeof profile.css === "object" && profile.css !== null) {
         const css = profile.css;

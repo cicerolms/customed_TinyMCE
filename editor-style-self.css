@@ -1,0 +1,8 @@
+body.cms-editor-content {
+  padding: 20px 24px 48px;
+  background: #ffffff;
+}
+
+body.cms-editor-content:focus {
+  outline: none;
+}

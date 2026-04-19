@@ -13,12 +13,16 @@
     },
     "./tailwind.css": "./assets/tailwind.css",
     "./tailwind-preset": "./tailwind.preset.cjs",
-    "./styles.css": "./styles.css"
+    "./styles.css": "./styles.css",
+    "./editor-style-self.css": "./editor-style-self.css",
+    "./editor-style-base.css": "./editor-style-base.css"
   },
   "files": [
     "dist",
     "assets/tailwind.css",
     "styles.css",
+    "editor-style-self.css",
+    "editor-style-base.css",
     "tailwind.preset.cjs",
     "README.md",
     "LICENSE"

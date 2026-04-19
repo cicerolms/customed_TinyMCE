@@ -17,6 +17,7 @@ export type EditorStyleProfile = {
   bodyClass?: string;
   blockFormats?: string;
   contentStyle?: string;
+  extendCssUrl?: string;
   css?: EditorStyleProfileCss;
 };
 
@@ -128,6 +129,7 @@ const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
   contentCssUrls: [],
   inlineCss: "",
   contentStyle: "",
+  extendCssUrl: "",
   css: {
     self: "",
     base: "",
@@ -357,6 +359,9 @@ async function loadStyleProfile(profileUrl: string): Promise<EditorStyleProfile>
   }
   if (typeof (profile as Record<string, unknown>).blockFormats === "string") {
     next.blockFormats = (profile as Record<string, unknown>).blockFormats as string;
+  }
+  if (typeof (profile as Record<string, unknown>).extendCssUrl === "string") {
+    next.extendCssUrl = (profile as Record<string, unknown>).extendCssUrl as string;
   }
   if (typeof (profile as Record<string, unknown>).css === "object" && (profile as Record<string, unknown>).css !== null) {
     const css = (profile as Record<string, unknown>).css as Record<string, unknown>;

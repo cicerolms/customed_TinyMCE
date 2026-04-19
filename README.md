@@ -47,9 +47,7 @@ Initialize with:
 - `contentCssUrls`: array of CSS URLs.
 - `bodyClass`: TinyMCE `body_class` value.
 - `blockFormats`: TinyMCE `block_formats` value.
-- `css.self`: editor-only CSS appended through TinyMCE `content_style`.
-- `css.base`: shared bare CSS appended for both editor and public rendering.
-- `css.extend`: site-specific bare CSS appended last and allowed to override `css.base`.
+- `extendCssUrl`: worker-local site-specific CSS file loaded after shared base CSS.
 - `inlineCss` / `contentStyle`: legacy compatibility fields.
 
 ## Tailwind integration
@@ -68,16 +66,18 @@ Recommended consuming-worker flow:
 4. Link public pages to `styles.css`.
 5. Point TinyMCE `contentCssUrls` at the same `styles.css`.
 6. Expose worker CSS routes for the profile split:
-   - `editor-style-self.css` for `css.self`
-   - `editor-style-profile.css` for `css.base + css.extend`
-7. Point TinyMCE `contentCssUrls` at all three worker-served stylesheets in order:
+   - `editor-style-self.css` from shared repo `editor-style-self.css`
+   - `editor-style-base.css` from shared repo `editor-style-base.css`
+   - `editor-style-profile.css` from the worker-local `extendCssUrl`
+7. Point TinyMCE `contentCssUrls` at all four worker-served stylesheets in order:
    - `/styles.css`
    - `/editor-style-self.css`
+   - `/editor-style-base.css`
    - `/editor-style-profile.css`
 8. Link public pages to:
    - `/styles.css`
    - `/editor-style-profile.css`
-9. Put site-specific editor/public overrides in `editor-style-profile.json` under `css.extend`.
+9. Keep reusable cross-site CSS in shared repo files and keep only the site-specific extend CSS in the worker repo.
 
 ## Worker integration
 
@@ -85,7 +85,7 @@ Recommended consuming-worker flow:
 2. Bundle this package into your browser entrypoint.
 3. Pass the TinyMCE global after your app loads the runtime.
 4. Build and serve a worker-owned `styles.css` from the shared Tailwind asset.
-5. Serve worker CSS routes for `css.self` and `css.base + css.extend`.
+5. Serve worker CSS routes for shared `self`, shared `base`, and worker-local `extend`.
 6. Pass those local stylesheet URLs in `contentCssUrls` so the editor iframe and public page stay in sync.
 
 ## Extraction plan
