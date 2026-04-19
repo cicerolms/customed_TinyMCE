@@ -1,8 +1,2 @@
-body.cms-editor-content {
-  padding: 20px 24px 48px;
-  background: #ffffff;
-}
-
-body.cms-editor-content:focus {
-  outline: none;
-}
+/* Intentionally empty.
+   Editor-specific presentation must live in the app-owned extend stylesheet. */
