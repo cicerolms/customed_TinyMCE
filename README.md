@@ -67,7 +67,17 @@ Recommended consuming-worker flow:
 3. Serve that built `styles.css` locally from the worker.
 4. Link public pages to `styles.css`.
 5. Point TinyMCE `contentCssUrls` at the same `styles.css`.
-6. Put site-specific editor/public overrides in `editor-style-profile.json` under `css.extend`.
+6. Expose worker CSS routes for the profile split:
+   - `editor-style-self.css` for `css.self`
+   - `editor-style-profile.css` for `css.base + css.extend`
+7. Point TinyMCE `contentCssUrls` at all three worker-served stylesheets in order:
+   - `/styles.css`
+   - `/editor-style-self.css`
+   - `/editor-style-profile.css`
+8. Link public pages to:
+   - `/styles.css`
+   - `/editor-style-profile.css`
+9. Put site-specific editor/public overrides in `editor-style-profile.json` under `css.extend`.
 
 ## Worker integration
 
@@ -75,7 +85,8 @@ Recommended consuming-worker flow:
 2. Bundle this package into your browser entrypoint.
 3. Pass the TinyMCE global after your app loads the runtime.
 4. Build and serve a worker-owned `styles.css` from the shared Tailwind asset.
-5. Pass that local `styles.css` URL in `contentCssUrls`.
+5. Serve worker CSS routes for `css.self` and `css.base + css.extend`.
+6. Pass those local stylesheet URLs in `contentCssUrls` so the editor iframe and public page stay in sync.
 
 ## Extraction plan
 
