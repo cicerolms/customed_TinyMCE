@@ -4,6 +4,10 @@ export type ClassicEditorLabels = {
     code?: string;
     source?: string;
 };
+export type ClassicEditorI18nConfig = {
+    lang?: string;
+    t?: (key: string, fallback?: string) => string;
+};
 export type EditorStyleProfileCss = {
     self?: string;
     base?: string;
@@ -25,9 +29,13 @@ export type ClassicEditorConfig = {
     styleProfile?: EditorStyleProfile;
     styleProfileUrl?: string;
     labels?: ClassicEditorLabels;
+    i18n?: ClassicEditorI18nConfig;
 };
 export type ClassicEditorInstance = {
     switchMode(nextMode: "visual" | "code"): Promise<void>;
+    getLocale(): string;
+    setLocale(nextLocale: string): Promise<void>;
+    setI18n(nextI18n: ClassicEditorI18nConfig): Promise<void>;
     insertHtml(html: string): void;
     setContent(html: string): void;
     syncToTextarea(): void;
@@ -46,6 +54,7 @@ export type SharedEditorBootstrapConfig = {
     styleProfileUrl?: string;
     styleProfile?: EditorStyleProfile;
     labels?: ClassicEditorLabels;
+    i18n?: ClassicEditorI18nConfig;
     backdropId?: string;
     assetBaseUrl?: string;
 };
@@ -56,6 +65,7 @@ type SharedEditorState = {
     textArea: HTMLTextAreaElement;
     statusNode: HTMLElement;
 };
+export declare function dispatchClassicEditorI18n(nextI18n: ClassicEditorI18nConfig): void;
 export declare function createClassicEditor(config: ClassicEditorConfig): Promise<ClassicEditorInstance>;
 export declare function bootstrapClassicEditor(config?: SharedEditorBootstrapConfig): Promise<SharedEditorState | null>;
 export {};

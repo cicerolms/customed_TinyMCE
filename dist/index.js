@@ -156,9 +156,16 @@ function resolveNode(node) {
 function getEndpoint(url, fallback) {
     return String(url || "").trim() || fallback;
 }
-function translate(key, fallback) {
-    const api = window.__i18n;
-    return api?.t?.(key, fallback) || fallback;
+function resolveEditorI18n(explicit) {
+    const globalI18n = window.__i18n;
+    const nextLang = explicit?.lang ?? globalI18n?.lang ?? document.documentElement.lang ?? "ja";
+    return {
+        lang: normalizeEditorLang(nextLang),
+        t: explicit?.t ?? globalI18n?.t,
+    };
+}
+function translate(key, fallback, i18n) {
+    return resolveEditorI18n(i18n).t?.(key, fallback) || fallback;
 }
 function normalizeEditorLang(input) {
     const value = String(input || "").toLowerCase();
@@ -174,6 +181,22 @@ function normalizeEditorLang(input) {
 }
 function label(labels, key, fallback) {
     return labels?.[key] || fallback;
+}
+function readEditorI18nDetail(event) {
+    if (!(event instanceof CustomEvent) || typeof event.detail !== "object" || event.detail === null) {
+        return {};
+    }
+    const detail = event.detail;
+    return {
+        lang: typeof detail.lang === "string" ? detail.lang : "",
+        t: typeof detail.t === "function" ? detail.t : undefined,
+    };
+}
+export function dispatchClassicEditorI18n(nextI18n) {
+    if (typeof document === "undefined") {
+        return;
+    }
+    document.dispatchEvent(new CustomEvent("cicerolms:editor-i18n-change", { detail: nextI18n }));
 }
 function defaultContentCssUrls(assetBaseUrl) {
     return [
@@ -363,15 +386,15 @@ function registerLegacyEditorI18n(tinymce, lang) {
     registeredEditorI18n.add(normalized);
     return normalized;
 }
-function localizeLegacyMenubar(editor) {
+function localizeLegacyMenubar(editor, i18n) {
     const labels = [
-        translate("editor.menu.file", "ファイル"),
-        translate("editor.menu.edit", "編集"),
-        translate("editor.menu.view", "表示"),
-        translate("editor.menu.insert", "挿入"),
-        translate("editor.menu.format", "フォーマット"),
-        translate("editor.menu.tools", "ツール"),
-        translate("editor.menu.table", "テーブル"),
+        translate("editor.menu.file", "ファイル", i18n),
+        translate("editor.menu.edit", "編集", i18n),
+        translate("editor.menu.view", "表示", i18n),
+        translate("editor.menu.insert", "挿入", i18n),
+        translate("editor.menu.format", "フォーマット", i18n),
+        translate("editor.menu.tools", "ツール", i18n),
+        translate("editor.menu.table", "テーブル", i18n),
     ];
     const nodes = Array.from(editor.getContainer().querySelectorAll(".mce-menubar .mce-menubtn span"));
     nodes.forEach((node, index) => {
@@ -598,7 +621,8 @@ export async function createClassicEditor(config) {
     const editorBodyClass = resolveEditorBodyClass(resolvedProfile);
     const tinymce = await waitForLegacyTinyMce(assetBaseUrl);
     await loadLegacyPluginScripts(tinymce, assetBaseUrl);
-    let editorLang = registerLegacyEditorI18n(tinymce, window.__i18n?.lang || document.documentElement.lang || "ja");
+    let activeI18n = resolveEditorI18n(config.i18n);
+    let editorLang = registerLegacyEditorI18n(tinymce, activeI18n.lang);
     let editor = null;
     let mode = "visual";
     const editorId = textarea.id;
@@ -637,21 +661,21 @@ export async function createClassicEditor(config) {
         table_toolbar: false,
         table_responsive_width: true,
         menu: {
-            file: { title: translate("editor.menu.file", "ファイル"), items: "newdocument | print" },
-            edit: { title: translate("editor.menu.edit", "編集"), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
-            view: { title: translate("editor.menu.view", "表示"), items: "code | visualaid visualchars visualblocks | fullscreen" },
-            insert: { title: translate("editor.menu.insert", "挿入"), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | vietworkaddmedia wp_more wp_page" },
-            format: { title: translate("editor.menu.format", "フォーマット"), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
-            tools: { title: translate("editor.menu.tools", "ツール"), items: "code" },
-            table: { title: translate("editor.menu.table", "テーブル"), items: "inserttable tableprops deletetable | row column cell" },
+            file: { title: translate("editor.menu.file", "ファイル", activeI18n), items: "newdocument | print" },
+            edit: { title: translate("editor.menu.edit", "編集", activeI18n), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
+            view: { title: translate("editor.menu.view", "表示", activeI18n), items: "code | visualaid visualchars visualblocks | fullscreen" },
+            insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | vietworkaddmedia wp_more wp_page" },
+            format: { title: translate("editor.menu.format", "フォーマット", activeI18n), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
+            tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "code" },
+            table: { title: translate("editor.menu.table", "テーブル", activeI18n), items: "inserttable tableprops deletetable | row column cell" },
         },
         init_instance_callback(instance) {
             editor = instance;
-            localizeLegacyMenubar(instance);
+            localizeLegacyMenubar(instance, activeI18n);
         },
         setup(instance) {
             instance.addMenuItem("vietworkaddmedia", {
-                text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加")),
+                text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加"), activeI18n),
                 icon: "media",
                 context: "insert",
                 onclick() {
@@ -662,14 +686,14 @@ export async function createClassicEditor(config) {
                 },
             });
             instance.addButton("vietworklinkcard", {
-                tooltip: translate("editor.linkCard.button", "Insert Linkcard"),
+                tooltip: translate("editor.linkCard.button", "Insert Linkcard", activeI18n),
                 image: `${assetBaseUrl}/vendor/pz-linkcard/mce-button.png`,
                 onclick() {
                     openLinkCardDialog(instance, assetBaseUrl);
                 },
             });
             instance.addButton("vietworkfullscreen", {
-                tooltip: translate("editor.fullscreen.writer", "Distraction-free writing mode"),
+                tooltip: translate("editor.fullscreen.writer", "Distraction-free writing mode", activeI18n),
                 icon: "fullscreen",
                 onclick() {
                     toggleEditorFullscreen(target, instance);
@@ -689,7 +713,7 @@ export async function createClassicEditor(config) {
                 window.wpActiveEditor = editorId;
             });
             instance.on("init", () => {
-                localizeLegacyMenubar(instance);
+                localizeLegacyMenubar(instance, activeI18n);
             });
             instance.on("remove", () => {
                 target.classList.remove("is-fullscreen");
@@ -713,10 +737,11 @@ export async function createClassicEditor(config) {
         }
         editor = null;
     };
-    const refreshEditorLanguage = async (nextLang) => {
-        const normalized = registerLegacyEditorI18n(tinymce, String(nextLang || ""));
+    const applyI18n = async (nextI18n) => {
+        activeI18n = resolveEditorI18n(nextI18n);
+        const normalized = registerLegacyEditorI18n(tinymce, activeI18n.lang);
         if (normalized === editorLang) {
-            localizeLegacyMenubar(tinymce.get(editorId) || editor);
+            localizeLegacyMenubar(tinymce.get(editorId) || editor, activeI18n);
             return;
         }
         editorLang = normalized;
@@ -749,13 +774,26 @@ export async function createClassicEditor(config) {
         void switchMode("code");
     });
     document.addEventListener("vietwork:i18n-applied", (event) => {
-        const nextLang = event instanceof CustomEvent ? event.detail?.lang : "";
-        void refreshEditorLanguage(nextLang);
+        const nextI18n = readEditorI18nDetail(event);
+        void applyI18n(nextI18n);
+    });
+    document.addEventListener("cicerolms:editor-i18n-change", (event) => {
+        const nextI18n = readEditorI18nDetail(event);
+        void applyI18n(nextI18n);
     });
     renderMode();
     await ensureVisualEditor();
     return {
         switchMode,
+        getLocale() {
+            return editorLang;
+        },
+        async setLocale(nextLocale) {
+            await applyI18n({ ...activeI18n, lang: nextLocale });
+        },
+        async setI18n(nextI18n) {
+            await applyI18n({ ...activeI18n, ...nextI18n });
+        },
         insertHtml(html) {
             if (!html)
                 return;
@@ -808,6 +846,7 @@ export async function bootstrapClassicEditor(config = {}) {
         styleProfileUrl: getEndpoint(config.styleProfileUrl, "/editor-style-profile.json"),
         styleProfile: config.styleProfile,
         labels: config.labels,
+        i18n: config.i18n,
     });
     const state = {
         editor,
