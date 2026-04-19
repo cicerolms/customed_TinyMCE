@@ -1,6 +1,6 @@
 # test_tinymce Worker Site
 
-This is a dedicated Cloudflare Worker test site that consumes `@cicerolms/vietwork-classic-editor`
+This is a dedicated Cloudflare Worker test site that consumes the shared editor bundle from `cicerolms/customed_TinyMCE`
 for an editable page and persists submitted content to D1.
 
 ## Routes
@@ -12,19 +12,21 @@ for an editable page and persists submitted content to D1.
 
 ## Local quick start
 
-1. Ensure TinyMCE shared package is built:
-   - `npm run build`
-2. Copy latest package bundle to test assets (already checked in; rerun after changes):
-   - `cp dist/index.js test_tinymce/public/editor-lib.js`
+1. The test worker serves a worker route `/editor-lib.js` that fetches the shared editor bundle from:
+   - `https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js`
+   with a private GitHub token.
+2. Configure private token (required):
+   - `wrangler secret put CICEROLMS_GH_TOKEN`
+   - The token must have repository read access for `cicerolms/customed_TinyMCE`.
 3. Create D1 binding:
    - `wrangler d1 create test_tinymce_db`
    - set `database_id` from that output in `test_tinymce/wrangler.toml`
-5. Create D1 schema:
+4. Create D1 schema:
    - `wrangler d1 execute test_tinymce_db --file ./migrations/0001_init.sql --local` (local smoke)  
    - `wrangler d1 execute test_tinymce_db --file ./migrations/0001_init.sql` (remote)
-6. Run worker:
+5. Run worker:
    - `cd test_tinymce && npm run dev`
-7. Open:
+6. Open:
   - `http://127.0.0.1:8787/edit`
 
 ## Guard

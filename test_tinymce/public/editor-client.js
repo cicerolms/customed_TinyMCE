@@ -1,116 +1,165 @@
-import { createClassicEditor } from './editor-lib.js';
+let createClassicEditor;
 
-function getElement(id) {
-  return document.getElementById(id);
+try {
+  ({ createClassicEditor } = await import("/editor-lib.js"));
+} catch (error) {
+  console.error("Failed to load shared editor package", error);
 }
 
-function escapeText(value) {
-  return String(value || '');
+function htmlFromMedia(dataset) {
+  const url = String(dataset.mediaUrl || "").trim();
+  if (!url) return "";
+
+  const title = String(dataset.mediaTitle || dataset.mediaFilename || "media").trim();
+  const alt = String(dataset.mediaAlt || title).trim();
+  const mimeType = String(dataset.mediaMime || "").trim();
+
+  const escapedUrl = url.replace(/"/g, "&quot;");
+  const escapedTitle = title.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char] || char));
+  const escapedAlt = alt.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] || char));
+
+  if (mimeType.startsWith("image/")) {
+    return `<img src="${escapedUrl}" alt="${escapedAlt}" />`;
+  }
+  return `<a href="${escapedUrl}">${escapedTitle}</a>`;
 }
 
-function resolvePayload(formData) {
+function getSubmitPayload(form) {
+  const formData = new FormData(form);
   const payload = {};
   for (const [key, value] of formData.entries()) {
-    payload[key] = value;
+    payload[key] = String(value || "");
   }
   return payload;
 }
 
 async function saveContent(form, statusNode) {
-  const formData = new FormData(form);
-  const payload = resolvePayload(formData);
-  payload.content = payload['editor-submit'] || '';
-  payload.title = payload['post-title'] || payload['title'] || '';
+  const payload = getSubmitPayload(form);
+  payload.content = payload.content || payload["content-visual"] || payload["content-code"] || payload["content-editor-code"] || "";
+  if (!payload.content) {
+    statusNode.textContent = "Save blocked: content is empty.";
+    return;
+  }
 
-  const response = await fetch('/save', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
+  const response = await fetch("/save", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const responseBody = await response.json().catch(() => ({}));
 
+  const responseBody = await response.json().catch(() => ({}));
   if (!response.ok || !responseBody.ok) {
     statusNode.textContent = `Save failed: ${JSON.stringify(responseBody)}`;
     return;
   }
 
-  statusNode.textContent = `Saved at ${new Date().toISOString()}\npostId=${responseBody.id}\ncontent=${escapeText(payload.content).slice(0, 250)}`;
+  statusNode.textContent = `Saved at ${new Date().toISOString()}\npostId=${responseBody.id}`;
 }
 
-async function initEditor() {
-  const root = document.querySelector('[data-classic-editor]');
+async function initClassicEditor() {
+  const root = document.querySelector("[data-classic-editor]");
   if (!(root instanceof HTMLElement)) return;
 
-  const visualTextarea = root.querySelector('[data-editor-visual]');
-  const codeTextarea = root.querySelector('[data-editor-code]');
-  const submitField = root.querySelector('[data-editor-submit-field]');
-  const initialContent = getElement('initial-content');
-  const form = document.getElementById('post-editor-form');
-  const statusNode = getElement('save-status');
-  const refreshButton = getElement('refresh');
+  const statusNode = document.getElementById("save-status");
+  if (!createClassicEditor) {
+    if (statusNode) {
+      statusNode.textContent = "Editor bootstrap failed. Configure private import token and URL.";
+    }
+    return;
+  }
 
+  const textarea = root.querySelector("[data-editor-visual], [data-editor-textarea]");
+  const codeTextarea = root.querySelector("[data-editor-code]");
+  const submitField = root.querySelector("[data-editor-submit-field]");
+  const visualTab = root.querySelector('[data-editor-tab="visual"]');
+  const codeTab = root.querySelector('[data-editor-tab="code"]');
+  const form = document.getElementById("post-editor-form");
+  const refreshButton = document.getElementById("refresh");
   if (
-    !(visualTextarea instanceof HTMLTextAreaElement) ||
-    !(codeTextarea instanceof HTMLTextAreaElement) ||
-    !(submitField instanceof HTMLTextAreaElement) ||
-    !(form instanceof HTMLFormElement) ||
-    !(statusNode instanceof HTMLElement)
-  ) {
-    return;
-  }
+    !(textarea instanceof HTMLTextAreaElement)
+    || !(codeTextarea instanceof HTMLTextAreaElement)
+    || !(submitField instanceof HTMLTextAreaElement)
+  ) return;
 
-  if (initialContent instanceof HTMLTextAreaElement && !visualTextarea.value) {
-    visualTextarea.value = initialContent.value || '';
-  }
+  if (!window.tinymce) return;
 
-  submitField.value = visualTextarea.value || '';
-  const tiny = window.tinymce;
-  if (!tiny) {
-    statusNode.textContent = 'TinyMCE failed to load.';
-    return;
-  }
-
-  await createClassicEditor({
+  const editor = await createClassicEditor({
     target: root,
-    textarea: visualTextarea,
-    codeTextarea: codeTextarea,
+    textarea,
+    codeTextarea,
     submitField,
-    tinyMceGlobal: tiny,
-    tinymceBaseUrl: '/assets/vendor/tinymce',
-    styleProfileUrl: '/assets/editor-style-profile.json',
+    tinyMceGlobal: window.tinymce,
+    tinymceBaseUrl: "https://cdn.jsdelivr.net/npm/tinymce@7.8.0",
+    tinymceVersion: "7.8.0",
+    styleProfileUrl: "/editor-style-profile.json",
     labels: {
-      source: 'Source',
-      yellowHighlight: 'Yellow Highlight',
-      searchPlaceholder: 'Search text',
-      searchPrev: 'Prev',
-      searchNext: 'Next',
-      noResults: 'No matches',
+      source: "Source",
+      yellowHighlight: "Yellow Highlight",
+      searchPlaceholder: "Search text",
+      searchPrev: "Prev",
+      searchNext: "Next",
+      noResults: "No results",
     },
   });
 
-  form.addEventListener('submit', async (event) => {
+  const selectMode = (mode) => editor.switchMode(mode);
+
+  visualTab?.addEventListener("click", (event) => {
     event.preventDefault();
+    selectMode("visual");
+  });
+  codeTab?.addEventListener("click", (event) => {
+    event.preventDefault();
+    selectMode("code");
+  });
+
+  if (visualTab) {
+    visualTab.setAttribute("aria-pressed", "true");
+  }
+  if (codeTab) {
+    codeTab.setAttribute("aria-pressed", "false");
+  }
+  selectMode("visual");
+
+  window.__testTinymceInsertMedia = (insertDataset) => {
+    const html = htmlFromMedia(insertDataset || {});
+    if (!html) return;
+    editor.insertHtml(html);
+  };
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!statusNode || !(form instanceof HTMLFormElement)) return;
     await saveContent(form, statusNode);
   });
 
-  if (refreshButton) {
-    refreshButton.addEventListener('click', () => {
-      if (window.confirm('Clear editor content?')) {
-        visualTextarea.value = '';
-        codeTextarea.value = '';
-        submitField.value = '';
-        statusNode.textContent = 'Editor cleared.';
-      }
-    });
-  }
+  refreshButton?.addEventListener("click", () => {
+    if (!window.confirm("Clear editor content?")) {
+      return;
+    }
+    textarea.value = "";
+    codeTextarea.value = "";
+    submitField.value = "";
+    if (statusNode) {
+      statusNode.textContent = "Editor cleared.";
+    }
+  });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  initEditor().catch((error) => {
-    const node = getElement('save-status');
-    if (node) {
-      node.textContent = `Editor init failed: ${String(error)}`;
+function bindMediaInsertHandler() {
+  window.addEventListener("test-tinymce:media-insert", (event) => {
+    if (window.__testTinymceInsertMedia && event?.detail?.dataset) {
+      window.__testTinymceInsertMedia(event.detail.dataset);
     }
-    console.error(error);
   });
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", async () => {
+    await initClassicEditor();
+    bindMediaInsertHandler();
+  });
+} else {
+  initClassicEditor();
+  bindMediaInsertHandler();
+}
