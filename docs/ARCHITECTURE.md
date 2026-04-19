@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide a reusable editor runtime that multiple Worker SSR projects can import without copying Vietwork-specific CMS code.
+Provide a reusable editor runtime that multiple Worker SSR projects can import without copying app-specific CMS code.
 
 ## Package boundary
 
@@ -13,7 +13,7 @@ Inside package:
 - inline source mode orchestration
 - fullscreen behavior
 - search state and navigation
-- reusable formatters such as `linebold_yellow`
+- reusable inline formatter hooks
 - style profile loading and merge (`content_css`/`content_style`)
 
 Outside package:

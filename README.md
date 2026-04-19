@@ -1,15 +1,15 @@
-# vietwork-classic-editor
+# customed_TinyMCE
 
 Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects.
 
-This package extracts the reusable part of the Vietwork CMS editor:
+This package provides a reusable classic TinyMCE editing stack for SSR projects:
 
 - Visual and inline source editing
 - Fullscreen editing
 - Search with hit count and next/previous navigation
 - Reusable toolbar actions
 - Five shared utility toolbar buttons that wrap selection with `utility_1` to `utility_5`
-- Custom inline formatting such as `linebold_yellow`
+- Custom inline formatting hooks
 - JSON-driven style profile support
 - Shared Tailwind-authored content CSS asset for consuming workers
 - Explicit i18n hooks so consuming apps can switch locale in the frontend
@@ -152,7 +152,7 @@ dispatchClassicEditorI18n({
 
 Compatibility:
 
-- `document.dispatchEvent(new CustomEvent("vietwork:i18n-applied", { detail: { lang } }))` still works.
+- legacy `document.dispatchEvent(new CustomEvent("vietwork:i18n-applied", { detail: { lang } }))` still works.
 - `window.__i18n` is still used as a fallback when no explicit `i18n` config is provided.
 - The documented contract is now `i18n`, `setLocale`, `setI18n`, and `dispatchClassicEditorI18n`.
 
