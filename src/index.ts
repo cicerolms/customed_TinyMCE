@@ -96,7 +96,8 @@ const DEFAULT_ASSET_BASE_URL = "/assets";
 const LEGACY_EDITOR_VERSION = "20260411-cms-legacy-wp-editor-v1";
 const LEGACY_TOOLBAR_1 = "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,vietworklinkcard,forecolor,table,vietworkfullscreen";
 const LEGACY_VECB_PLUGIN_NAMES = Array.from({ length: 18 }, (_, index) => `vecb_button${index + 1}`);
-const LEGACY_TOOLBAR_2 = LEGACY_VECB_PLUGIN_NAMES.join(",");
+const LEGACY_UTILITY_BUTTON_NAMES = Array.from({ length: 5 }, (_, index) => `utility_${index + 1}`);
+const LEGACY_TOOLBAR_2 = [...LEGACY_VECB_PLUGIN_NAMES, ...LEGACY_UTILITY_BUTTON_NAMES].join(",");
 const LEGACY_PLUGINS = [
   "charmap",
   "colorpicker",
@@ -526,6 +527,13 @@ function insertAtCaret(textarea: HTMLTextAreaElement, value: string): void {
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function wrapSelectionWithClass(editor: LegacyTinyMce, className: string): void {
+  const selectedHtml = String(editor?.selection?.getContent?.() || "").trim();
+  const content = selectedHtml || className;
+  editor.focus();
+  editor.selection.setContent(`<span class="${className}">${content}</span>`);
+}
+
 function buildInsertHtml(dataset: DOMStringMap): string {
   const url = String(dataset.mediaUrl || "").trim();
   if (!url) return "";
@@ -806,6 +814,16 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
         onclick() {
           toggleEditorFullscreen(target, instance);
         },
+      });
+      LEGACY_UTILITY_BUTTON_NAMES.forEach((buttonName, index) => {
+        const utilityClass = `utility_${index + 1}`;
+        instance.addButton(buttonName, {
+          text: `U${index + 1}`,
+          tooltip: `Apply ${utilityClass}`,
+          onclick() {
+            wrapSelectionWithClass(instance, utilityClass);
+          },
+        });
       });
       instance.on("focus", () => {
         (window as WindowWithEditor).wpActiveEditor = editorId;

@@ -8,6 +8,7 @@ This package extracts the reusable part of the Vietwork CMS editor:
 - Fullscreen editing
 - Search with hit count and next/previous navigation
 - Reusable toolbar actions
+- Five shared utility toolbar buttons that wrap selection with `utility_1` to `utility_5`
 - Custom inline formatting such as `linebold_yellow`
 - JSON-driven style profile support
 - Shared Tailwind-authored content CSS asset for consuming workers
@@ -78,6 +79,7 @@ Recommended consuming-worker flow:
    - `/styles.css`
    - `/editor-style-profile.css`
 9. Keep reusable cross-site CSS in shared repo files and keep only the site-specific extend CSS in the worker repo.
+10. Use the shared `U1` to `U5` toolbar buttons to apply `.utility_1` to `.utility_5`, then style those classes in the worker-local extend CSS.
 
 ## Worker integration
 
