@@ -110,7 +110,7 @@ const LEGACY_EDITOR_UI_TRANSLATIONS = {
 };
 const tinyMceLoaderCache = new Map();
 const legacyPluginLoaderCache = new Map();
-const legacyWordpressPluginOverrideCache = new Map();
+const legacyPluginOverrideCache = new Map();
 const registeredEditorI18n = new Set();
 function resolveNode(node) {
     if (!node)
@@ -259,14 +259,16 @@ async function waitForLegacyTinyMce(assetBaseUrl) {
         if (!win.tinymce) {
             throw new Error("Legacy TinyMCE did not initialize");
         }
-        const overrideUrl = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/plugins/wordpress/plugin.js`;
-        let overridePromise = legacyWordpressPluginOverrideCache.get(assetBaseUrl);
+        let overridePromise = legacyPluginOverrideCache.get(assetBaseUrl);
         if (!overridePromise) {
-            overridePromise = loadScript(overrideUrl).catch((error) => {
-                legacyWordpressPluginOverrideCache.delete(assetBaseUrl);
+            overridePromise = (async () => {
+                await loadScript(`${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/plugins/wordpress/plugin.js`);
+                await loadScript(`${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/plugins/paste/plugin.js`);
+            })().catch((error) => {
+                legacyPluginOverrideCache.delete(assetBaseUrl);
                 throw error;
             });
-            legacyWordpressPluginOverrideCache.set(assetBaseUrl, overridePromise);
+            legacyPluginOverrideCache.set(assetBaseUrl, overridePromise);
         }
         await overridePromise;
         win.tinymce.baseURL = tinyMceBaseUrl;
@@ -390,6 +392,9 @@ function buildInsertHtml(dataset) {
         return `<img src="${escapedUrl}" alt="${escapedAlt}">`;
     }
     return `<a href="${escapedUrl}">${escapedTitle}</a>`;
+}
+function sourceCodeLabel(i18n) {
+    return translate("editor.sourceCode", "Source code", i18n);
 }
 function getPayload(form) {
     const payload = {};
@@ -611,11 +616,11 @@ export async function createClassicEditor(config) {
             edit: { title: translate("editor.menu.edit", "編集", activeI18n), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
             view: {
                 title: translate("editor.menu.view", "表示", activeI18n),
-                items: "code | visualaid visualchars visualblocks | classiceditorfullscreen",
+                items: "classiceditorcode | visualaid visualchars visualblocks | classiceditorfullscreen",
             },
             insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: LEGACY_INSERT_MENU_ITEMS },
             format: { title: translate("editor.menu.format", "フォーマット", activeI18n), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
-            tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "code" },
+            tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "classiceditorcode" },
             table: { title: translate("editor.menu.table", "テーブル", activeI18n), items: "inserttable tableprops deletetable | row column cell" },
         },
         init_instance_callback(instance) {
@@ -638,6 +643,22 @@ export async function createClassicEditor(config) {
             }
         },
         setup(instance) {
+            const openInlineSourceMode = () => {
+                void switchMode("code");
+            };
+            instance.addCommand("mceCodeEditor", openInlineSourceMode);
+            instance.addCommand("classiceditorcode", openInlineSourceMode);
+            instance.addButton("classiceditorcode", {
+                tooltip: sourceCodeLabel(activeI18n),
+                icon: "code",
+                onclick: openInlineSourceMode,
+            });
+            instance.addMenuItem("classiceditorcode", {
+                text: sourceCodeLabel(activeI18n),
+                icon: "code",
+                context: "view tools",
+                onclick: openInlineSourceMode,
+            });
             instance.addMenuItem("classiceditoraddmedia", {
                 text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加"), activeI18n),
                 icon: "media",
@@ -690,6 +711,12 @@ export async function createClassicEditor(config) {
             instance.on("init", () => {
                 syncTextareaFromEditor();
                 localizeLegacyMenubar(instance, activeI18n);
+                const codeMenuItems = Array.from(document.querySelectorAll('[title="Code"], [title="Source code"], .mce-menu [aria-label="Code"], .mce-menu [aria-label="Source code"]'));
+                codeMenuItems.forEach((node) => {
+                    if (node instanceof HTMLElement) {
+                        node.setAttribute("data-classic-editor-inline-code", "1");
+                    }
+                });
             });
             instance.on("remove", () => {
                 target.classList.remove("is-fullscreen");

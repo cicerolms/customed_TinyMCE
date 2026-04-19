@@ -2261,6 +2261,9 @@ var paste = (function (domGlobals) {
       if (isWordHtml || internal) {
         return content;
       }
+      if (editor.inline) {
+        return content;
+      }
       var webKitStylesSetting = Settings.getWebkitStyles(editor);
       var webKitStyles;
       if (Settings.shouldRemoveWebKitStyles(editor) === false || webKitStylesSetting === 'all') {

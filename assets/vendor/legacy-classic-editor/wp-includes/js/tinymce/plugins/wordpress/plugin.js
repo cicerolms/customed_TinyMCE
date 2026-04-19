@@ -630,11 +630,15 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 
 		if ( editor.getParam( 'wp_paste_filters', true ) ) {
 			editor.on( 'PastePreProcess', function( event ) {
+				if ( editor.inline && event.content && event.content.indexOf( '<style' ) !== -1 ) {
+					event.content = preserveInlineStyleBlocks( event.content );
+				}
+
 				// Remove trailing <br> added by WebKit browsers to the clipboard.
 				event.content = event.content.replace( /<br class="?Apple-interchange-newline"?>/gi, '' );
 
 				// In WebKit this is handled by removeWebKitStyles().
-				if ( ! tinymce.Env.webkit ) {
+				if ( ! tinymce.Env.webkit && ! editor.inline ) {
 					// Remove all inline styles.
 					event.content = event.content.replace( /(<[^>]+) style="[^"]*"([^>]*>)/gi, '$1$2' );
 
@@ -683,6 +687,7 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 			'title|contenteditable|draggable|dropzone|hidden|spellcheck|translate],' + // Global attributes.
 			'i,' + // Don't replace <i> with <em> and <b> with <strong> and don't remove them when empty.
 			'b,' +
+			'style[type|media|nonce|title],' + // Preserve inline styles for controlled article fragments.
 			'script[src|async|defer|type|charset|crossorigin|integrity]'; // Add support for <script>.
 
 		editor.schema.addValidElements( validElementsSetting );

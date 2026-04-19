@@ -11,7 +11,7 @@ export type LegacyEditorHostWindow = Window & typeof globalThis & {
 
 export const LEGACY_EDITOR_VERSION = "20260419-classic-editor-shell-v1";
 export const LEGACY_TOOLBAR_1 =
-  "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,classiceditorlinkcard,forecolor,table,classiceditorfullscreen";
+  "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,classiceditorlinkcard,classiceditorcode,forecolor,table,classiceditorfullscreen";
 export const LEGACY_PLUGINS = [
   "charmap",
   "colorpicker",
