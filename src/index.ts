@@ -1,6 +1,7 @@
 export type ClassicEditorLabels = {
   source?: string;
   yellowHighlight?: string;
+  presetPanel?: string;
   fullscreenEnter?: string;
   fullscreenExit?: string;
   searchPlaceholder?: string;
@@ -80,6 +81,33 @@ type BootstrapStatusNode = {
   status?: string;
   error?: boolean;
 };
+
+type LegacyPreset = {
+  key: string;
+  label: string;
+  title: string;
+  insertHtml: (selectedHtml: string) => string;
+};
+
+const LEGACY_PRESETS: LegacyPreset[] = [
+  { key: 'vecb-1', label: 'S', title: 'box-frame-orange', insertHtml: (selectedHtml) => `<div class="box-frame-orange">${selectedHtml}</div>` },
+  { key: 'vecb-2', label: 'ST', title: 'box-frame-orange-title', insertHtml: (selectedHtml) => `<p class="box-frame-orange-title">${selectedHtml}</p>` },
+  { key: 'vecb-3', label: 'D', title: 'box-frame-dot', insertHtml: (selectedHtml) => `<div class="box-frame-dot"><p>${selectedHtml}</p></div>` },
+  { key: 'vecb-4', label: 'DD', title: 'box-frame-double', insertHtml: (selectedHtml) => `<div class="box-frame-double">${selectedHtml}</div>` },
+  { key: 'vecb-5', label: 'DT', title: 'box-frame-double-title', insertHtml: (selectedHtml) => `<p class="box-frame-double-title">${selectedHtml}</p>` },
+  { key: 'vecb-6', label: 'O', title: 'box_orange', insertHtml: (selectedHtml) => `<div class="box_orange">${selectedHtml}</div>` },
+  { key: 'vecb-7', label: 'OT', title: 'box_orange_ttl', insertHtml: (selectedHtml) => `<span class="box_orange_ttl">${selectedHtml}</span>` },
+  { key: 'vecb-8', label: 'G', title: 'box_green', insertHtml: (selectedHtml) => `<div class="box_green">${selectedHtml}</div>` },
+  { key: 'vecb-9', label: 'GT', title: 'box_green_ttl', insertHtml: (selectedHtml) => `<span class="box_green_ttl">${selectedHtml}</span>` },
+  { key: 'vecb-10', label: 'B', title: 'box-blue', insertHtml: (selectedHtml) => `<div class="box-blue">${selectedHtml}</div>` },
+  { key: 'vecb-11', label: 'BT', title: 'box-blue-title', insertHtml: (selectedHtml) => `<p class="box-blue-title">${selectedHtml}</p>` },
+  { key: 'vecb-12', label: 'FO', title: 'box_frame_orange', insertHtml: (selectedHtml) => `<div class="box_frame_orange">${selectedHtml}</div>` },
+  { key: 'vecb-13', label: 'FT', title: 'box_frame_orange_ttl', insertHtml: (selectedHtml) => `<span class="box_frame_orange_ttl">${selectedHtml}</span>` },
+  { key: 'vecb-14', label: 'L1', title: 'listdot_orange2', insertHtml: (selectedHtml) => `<div class="listdot_orange2">${selectedHtml}</div>` },
+  { key: 'vecb-15', label: 'L2', title: 'listdot_orange', insertHtml: (selectedHtml) => `<div class="listdot_orange">${selectedHtml}</div>` },
+  { key: 'vecb-16', label: 'N', title: 'listnumber', insertHtml: (selectedHtml) => `<div class="listnumber">${selectedHtml}</div>` },
+  { key: 'vecb-17', label: 'Y', title: 'linebold_yellow', insertHtml: (selectedHtml) => `<span class="linebold_yellow">${selectedHtml}</span>` },
+];
 
 function resolveNode(node: OptionalNode): HTMLElement | null {
   if (!node) return null;
@@ -423,9 +451,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && !(window
 
 const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
   bodyClass: 'cms-editor-content',
-  blockFormats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre',
+  blockFormats: 'Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre',
   contentCssUrls: [],
-  inlineCss: `body.cms-editor-content {\n  box-sizing: border-box;\n  max-width: 100%;\n  margin: 0 auto;\n  padding: 12px 14px;\n  color: #1f2937;\n  font-family: inherit;\n  line-height: 1.6;\n  word-break: break-word;\n  text-align: left;\n}\n\nbody.cms-editor-content .linebold_yellow {\n  font-weight: 700;\n  background-image: linear-gradient(#fff9bf, #fff9bf);\n  background-position: 0% 100%;\n  background-repeat: no-repeat;\n  background-size: 100% 10px;\n}\n\nbody.cms-editor-content .classic-editor-search-match {\n  background: #fff3a3;\n}\n\nbody.cms-editor-content .classic-editor-search-match-current {\n  background: #ffd36b;\n}\n`,
+  inlineCss: `body.cms-editor-content {\n  box-sizing: border-box;\n  max-width: 100%;\n  margin: 0 auto;\n  padding: 12px 14px;\n  color: #1f2937;\n  font-family: inherit;\n  line-height: 1.6;\n  word-break: break-word;\n  text-align: left;\n}\n\nbody.cms-editor-content .linebold_yellow {\n  font-weight: 700;\n  background-image: linear-gradient(#fff9bf, #fff9bf);\n  background-position: 0% 100%;\n  background-repeat: no-repeat;\n  background-size: 100% 10px;\n}\n\nbody.cms-editor-content .ce-callout-soft {\n  padding: 1rem 1.25rem;\n  border-left: 6px solid #e37b40;\n  background: #fff5ec;\n  border-radius: 8px;\n}\n\nbody.cms-editor-content .ce-frame-dashed {\n  padding: 1rem 1.25rem;\n  border: 2px dashed #d1d5db;\n  border-radius: 10px;\n}\n\nbody.cms-editor-content .ce-frame-accent {\n  padding: 1rem 1.25rem;\n  border: 2px solid #ef7d32;\n  border-radius: 10px;\n  background: linear-gradient(180deg, #fffaf4, #ffffff);\n}\n\nbody.cms-editor-content .ce-label {\n  display: inline-block;\n  min-width: 1.8rem;\n  padding: 0.08rem 0.45rem;\n  border-radius: 4px;\n  font-size: 0.88em;\n  font-weight: 700;\n  line-height: 1.4;\n  text-align: center;\n}\n\nbody.cms-editor-content .ce-label-orange {\n  color: #9a3412;\n  border: 2px solid #fb923c;\n  background: #fff7ed;\n}\n\nbody.cms-editor-content .ce-label-red {\n  color: #ffffff;\n  background: #dc5b35;\n}\n\nbody.cms-editor-content .ce-label-green {\n  color: #ffffff;\n  background: #67c23a;\n}\n\nbody.cms-editor-content .ce-label-blue {\n  color: #ffffff;\n  background: #3b82f6;\n}\n\nbody.cms-editor-content .ce-faq-mark {\n  display: inline-block;\n  min-width: 1.4rem;\n  border-radius: 999px;\n  background: #0f62a9;\n  color: #ffffff;\n  font-weight: 800;\n  text-align: center;\n}\n\nbody.cms-editor-content .classic-editor-search-match {\n  background: #fff3a3;\n}\n\nbody.cms-editor-content .classic-editor-search-match-current {\n  background: #ffd36b;\n}\n`,
   contentStyle: '',
 };
 
@@ -435,6 +463,29 @@ function label(labels: ClassicEditorLabels | undefined, key: keyof ClassicEditor
 
 function normalizeCssUrl(url: string): string {
   return url.trim();
+}
+
+function createPresetUi(labels: ClassicEditorLabels | undefined) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'classic-editor-package-presets';
+  wrapper.innerHTML = `
+    <span class="classic-editor-package-presets-label">${label(labels, 'presetPanel', 'Presets')}</span>
+    <div class="classic-editor-package-presets-list"></div>
+  `;
+  const list = wrapper.querySelector('.classic-editor-package-presets-list') as HTMLElement;
+
+  LEGACY_PRESETS.forEach((preset) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `classic-editor-package-preset classic-editor-package-preset-${preset.key}`;
+    button.dataset.presetKey = preset.key;
+    button.title = preset.title;
+    button.setAttribute('aria-label', preset.title);
+    button.textContent = preset.label;
+    list.appendChild(button);
+  });
+
+  return { wrapper, list };
 }
 
 function mergeProfiles(base: EditorStyleProfile, override?: EditorStyleProfile | null): EditorStyleProfile {
@@ -545,10 +596,14 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   const toolbar = document.createElement('div');
   toolbar.className = 'classic-editor-package-toolbar';
   toolbar.innerHTML = `
+    <div class="classic-editor-package-presets-host"></div>
     <div class="classic-editor-package-search-host"></div>
   `;
+  const presetHost = toolbar.querySelector('.classic-editor-package-presets-host') as HTMLElement;
   target.prepend(toolbar);
   const searchHost = toolbar.querySelector('.classic-editor-package-search-host') as HTMLElement;
+  const presetUi = createPresetUi(labels);
+  presetHost.replaceChildren(presetUi.wrapper);
 
   const createSearchUi = () => {
     const wrapper = document.createElement('div');
@@ -571,6 +626,7 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   const visualSearchUi = createSearchUi();
   const codeSearchUi = createSearchUi();
   searchHost.replaceChildren(codeSearchUi.wrapper);
+  searchHost.classList.add('hidden');
 
   const updateStatus = (query: string, total: number, currentIndex: number) => {
     if (!query.trim()) {
@@ -598,16 +654,25 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     target: textarea,
     base_url: tinymceBaseUrl,
     suffix: '.min',
-    menubar: true,
+    menubar: 'file edit view insert format tools table',
     promotion: false,
     branding: false,
     relative_urls: false,
     remove_script_host: false,
     convert_urls: false,
-    plugins: 'advlist link lists charmap table fullscreen pagebreak',
-    toolbar: 'blocks fontsize bold italic removeformat underline yellowhighlight blockquote bullist numlist alignleft aligncenter alignright link unlink undo redo pastetext charmap pagebreak forecolor table fullscreen inlinecode',
+    browser_spellcheck: true,
+    contextmenu: 'undo redo | inserttable | cell row column deletetable | link',
+    toolbar_mode: 'wrap',
+    block_unsupported_drop: false,
+    plugins: 'advlist autolink anchor charmap code fullscreen hr image insertdatetime link lists media nonbreaking pagebreak paste preview searchreplace table visualblocks visualchars wordcount directionality',
+    toolbar: [
+      'blocks fontsize | bold italic removeformat underline blockquote bullist numlist alignleft aligncenter alignright | link unlink undo redo pastetext charmap pagebreak vietworklinkcard forecolor table vietworkfullscreen',
+    ],
     body_class: resolvedProfile.bodyClass,
     block_formats: resolvedProfile.blockFormats,
+    fontsize_formats: '8pt 10pt 12pt 14pt 18pt 24pt 36pt',
+    height: 520,
+    resize: true,
     ...(contentCss ? { content_css: contentCss } : {}),
     ...(styleCss ? { content_style: styleCss } : {}),
     setup(instance: any) {
@@ -631,6 +696,28 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
         tooltip: label(labels, 'source', 'Source'),
         onAction: () => switchMode('code'),
       });
+      instance.ui.registry.addButton('vietworklinkcard', {
+        tooltip: 'Insert Linkcard',
+        text: 'Linkcard',
+        onAction: () => {
+          const selectedText = String(instance.selection?.getContent?.({ format: 'text' }) || '').trim();
+          const matched = selectedText.match(/((https?|file|ftp|data|ogg):\/\/[^ "<,]+)/i);
+          const initialUrl = matched ? matched[1] : '';
+          const url = window.prompt('Linkcard URL', initialUrl);
+          if (!url) return;
+          instance.focus();
+          instance.selection.setContent(`<p>[blogcard url="${instance.dom.encode(String(url).trim())}"]</p>`);
+        },
+      });
+      instance.ui.registry.addButton('vietworkfullscreen', {
+        tooltip: 'Distraction-free writing mode',
+        icon: 'fullscreen',
+        onAction: () => {
+          target.classList.toggle('is-fullscreen');
+          document.body.classList.toggle('editor-fullscreen-active', target.classList.contains('is-fullscreen'));
+          instance.execCommand('mceFullScreen');
+        },
+      });
       instance.on('init', () => {
         const header = instance.getContainer()?.querySelector('.tox-editor-header');
         if (header && !header.querySelector('.classic-editor-package-search')) {
@@ -647,6 +734,15 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
         codeTextarea.value = html;
         submitField.value = html;
       });
+    },
+    menu: {
+      file: { title: 'File', items: 'newdocument | print' },
+      edit: { title: 'Edit', items: 'undo redo | cut copy paste pastetext | selectall | searchreplace' },
+      view: { title: 'View', items: 'code | visualaid visualchars visualblocks | fullscreen' },
+      insert: { title: 'Insert', items: 'link media | inserttable charmap hr nonbreaking anchor insertdatetime | pagebreak' },
+      format: { title: 'Format', items: 'bold italic underline strikethrough | superscript subscript | blocks align | removeformat' },
+      tools: { title: 'Tools', items: 'code' },
+      table: { title: 'Table', items: 'inserttable tableprops deletetable | row column cell' },
     },
   });
 
@@ -713,6 +809,30 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
 
   bindSearchUi(visualSearchUi);
   bindSearchUi(codeSearchUi);
+
+  presetUi.list.addEventListener('click', (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest('[data-preset-key]') : null;
+    if (!(button instanceof HTMLButtonElement)) return;
+    const preset = LEGACY_PRESETS.find((item) => item.key === button.dataset.presetKey);
+    if (!preset) return;
+
+    if (mode === 'code') {
+      const selectedText = codeTextarea.value.slice(codeTextarea.selectionStart ?? 0, codeTextarea.selectionEnd ?? 0);
+      const html = preset.insertHtml(selectedText);
+      const start = codeTextarea.selectionStart ?? codeTextarea.value.length;
+      const end = codeTextarea.selectionEnd ?? codeTextarea.value.length;
+      codeTextarea.setRangeText(html, start, end, 'end');
+      submitField.value = codeTextarea.value;
+      return;
+    }
+
+    editor.focus();
+    const selectedHtml = String(editor.selection?.getContent?.() || '');
+    editor.selection.setContent(preset.insertHtml(selectedHtml));
+    const current = editor.getContent();
+    codeTextarea.value = current;
+    submitField.value = current;
+  });
 
   function switchMode(nextMode: 'visual' | 'code') {
     if (nextMode === mode) return;

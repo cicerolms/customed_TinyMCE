@@ -1,6 +1,7 @@
 export type ClassicEditorLabels = {
     source?: string;
     yellowHighlight?: string;
+    presetPanel?: string;
     fullscreenEnter?: string;
     fullscreenExit?: string;
     searchPlaceholder?: string;
