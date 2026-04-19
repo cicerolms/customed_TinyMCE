@@ -22,7 +22,7 @@ async function boot() {
     submitField,
     tinyMceGlobal: tinymce,
     tinymceBaseUrl: '/assets/vendor/tinymce',
-    contentCssUrl: '/assets/classic-editor-content.css',
+    styleProfileUrl: '/assets/editor-classic-style-profile.json',
     labels: {
       source: 'Source',
       yellowHighlight: 'Yellow Highlight',

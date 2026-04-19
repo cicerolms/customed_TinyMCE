@@ -9,12 +9,14 @@ This package extracts the reusable part of the Vietwork CMS editor:
 - Search with hit count and next/previous navigation
 - Reusable toolbar actions
 - Custom inline formatting such as `linebold_yellow`
+- JSON-driven style profile support
 
 ## What stays outside this package
 
 Keep these in each app repo:
 
 - Worker asset hosting and TinyMCE static file delivery
+- JSON style profile contract
 - Project-specific content CSS
 - Media picker modal routes
 - Project i18n dictionaries
@@ -34,8 +36,18 @@ Initialize with:
 - `submitField`
 - `tinyMceGlobal`
 - `tinymceBaseUrl`
-- optional `contentCssUrl`
+- optional `contentCssUrl` (legacy)
+- optional `styleProfile`
+- optional `styleProfileUrl`
 - optional translated labels
+
+`styleProfile` fields:
+
+- `contentCssUrls`: array of CSS URLs.
+- `inlineCss`: inline CSS applied via TinyMCE `content_style`.
+- `contentStyle`: inline CSS alias for `content_style`.
+- `bodyClass`: TinyMCE `body_class` value.
+- `blockFormats`: TinyMCE `block_formats` value.
 
 ## Worker integration
 

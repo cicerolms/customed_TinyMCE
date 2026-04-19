@@ -14,6 +14,7 @@ Inside package:
 - fullscreen behavior
 - search state and navigation
 - reusable formatters such as `linebold_yellow`
+- style profile loading and merge (`content_css`/`content_style`)
 
 Outside package:
 

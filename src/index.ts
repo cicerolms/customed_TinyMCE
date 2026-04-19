@@ -9,6 +9,14 @@ export type ClassicEditorLabels = {
   noResults?: string;
 };
 
+export type EditorStyleProfile = {
+  contentCssUrls?: string[];
+  inlineCss?: string;
+  bodyClass?: string;
+  blockFormats?: string;
+  contentStyle?: string;
+};
+
 export type ClassicEditorConfig = {
   target: HTMLElement;
   textarea: HTMLTextAreaElement;
@@ -19,6 +27,8 @@ export type ClassicEditorConfig = {
   tinymceVersion?: string;
   contentCssUrl?: string;
   labels?: ClassicEditorLabels;
+  styleProfile?: EditorStyleProfile;
+  styleProfileUrl?: string;
   mediaInsert?: (html: string) => void;
 };
 
@@ -28,8 +38,72 @@ export type ClassicEditorInstance = {
   destroy(): Promise<void>;
 };
 
+const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
+  bodyClass: 'cms-editor-content',
+  blockFormats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre',
+  contentCssUrls: [],
+  inlineCss: `body.cms-editor-content {\n  box-sizing: border-box;\n  max-width: 100%;\n  margin: 0 auto;\n  padding: 12px 14px;\n  color: #1f2937;\n  font-family: inherit;\n  line-height: 1.6;\n  word-break: break-word;\n  text-align: left;\n}\n\nbody.cms-editor-content .linebold_yellow {\n  font-weight: 700;\n  background-image: linear-gradient(#fff9bf, #fff9bf);\n  background-position: 0% 100%;\n  background-repeat: no-repeat;\n  background-size: 100% 10px;\n}\n\nbody.cms-editor-content .classic-editor-search-match {\n  background: #fff3a3;\n}\n\nbody.cms-editor-content .classic-editor-search-match-current {\n  background: #ffd36b;\n}\n`,
+  contentStyle: '',
+};
+
 function label(labels: ClassicEditorLabels | undefined, key: keyof ClassicEditorLabels, fallback: string): string {
   return labels?.[key] || fallback;
+}
+
+function normalizeCssUrl(url: string): string {
+  return url.trim();
+}
+
+function mergeProfiles(base: EditorStyleProfile, override?: EditorStyleProfile | null): EditorStyleProfile {
+  if (!override) {
+    return base;
+  }
+
+  return {
+    bodyClass: override.bodyClass ?? base.bodyClass,
+    blockFormats: override.blockFormats ?? base.blockFormats,
+    contentCssUrls: override.contentCssUrls
+      ? [...override.contentCssUrls]
+      : base.contentCssUrls,
+    inlineCss: override.inlineCss ?? base.inlineCss,
+    contentStyle: override.contentStyle ?? base.contentStyle,
+  };
+}
+
+async function loadStyleProfile(profileUrl: string): Promise<EditorStyleProfile> {
+  const response = await fetch(profileUrl, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load editor style profile: ${response.status}`);
+  }
+
+  const profile = await response.json();
+  if (!profile || typeof profile !== 'object') {
+    throw new Error('Invalid editor style profile payload');
+  }
+
+  const next: EditorStyleProfile = {};
+  if (Array.isArray(profile.contentCssUrls)) {
+    next.contentCssUrls = profile.contentCssUrls
+      .map((value: unknown) => (typeof value === 'string' ? normalizeCssUrl(value) : ''))
+      .filter(Boolean);
+  }
+  if (typeof profile.inlineCss === 'string') {
+    next.inlineCss = profile.inlineCss;
+  }
+  if (typeof profile.contentStyle === 'string') {
+    next.contentStyle = profile.contentStyle;
+  }
+  if (typeof profile.bodyClass === 'string') {
+    next.bodyClass = profile.bodyClass;
+  }
+  if (typeof profile.blockFormats === 'string') {
+    next.blockFormats = profile.blockFormats;
+  }
+
+  return next;
 }
 
 export async function createClassicEditor(config: ClassicEditorConfig): Promise<ClassicEditorInstance> {
@@ -43,7 +117,42 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     tinymceVersion = '1',
     contentCssUrl,
     labels,
+    styleProfile,
+    styleProfileUrl,
+    mediaInsert,
   } = config;
+
+  const styleProfiles: EditorStyleProfile[] = [DEFAULT_EDITOR_STYLE_PROFILE];
+  if (contentCssUrl) {
+    styleProfiles.push({ contentCssUrls: [contentCssUrl] });
+  }
+
+  if (styleProfileUrl) {
+    try {
+      const loaded = await loadStyleProfile(styleProfileUrl);
+      styleProfiles.push(loaded);
+    } catch (error) {
+      console.warn('Failed to load editor style profile, using defaults only', error);
+    }
+  }
+
+  if (styleProfile) {
+    styleProfiles.push(styleProfile);
+  }
+
+  const resolvedProfile = styleProfiles.reduce((current, next) => mergeProfiles(current, next), {} as EditorStyleProfile);
+
+  const styleCss = [
+    resolvedProfile.contentStyle,
+    resolvedProfile.inlineCss,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join('\n\n');
+
+  const contentCss = (resolvedProfile.contentCssUrls || [])
+    .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+    .map((url) => `${normalizeCssUrl(url)}${tinymceVersion ? `?v=${tinymceVersion}` : ''}`)
+    .join(',');
 
   let mode: 'visual' | 'code' = 'visual';
   let visualFullscreenActive = false;
@@ -114,8 +223,10 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     convert_urls: false,
     plugins: 'advlist link lists charmap table fullscreen pagebreak',
     toolbar: 'blocks fontsize bold italic removeformat underline yellowhighlight blockquote bullist numlist alignleft aligncenter alignright link unlink undo redo pastetext charmap pagebreak forecolor table fullscreen inlinecode',
-    body_class: 'cms-editor-content',
-    content_css: contentCssUrl ? `${contentCssUrl}?v=${tinymceVersion}` : undefined,
+    body_class: resolvedProfile.bodyClass,
+    block_formats: resolvedProfile.blockFormats,
+    ...(contentCss ? { content_css: contentCss } : {}),
+    ...(styleCss ? { content_style: styleCss } : {}),
     setup(instance: any) {
       instance.formatter.register('lineboldyellow', {
         inline: 'span',
@@ -251,6 +362,7 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   return {
     switchMode,
     insertHtml(html: string) {
+      if (!html) return;
       if (mode === 'code') {
         const start = codeTextarea.selectionStart ?? codeTextarea.value.length;
         const end = codeTextarea.selectionEnd ?? codeTextarea.value.length;
@@ -262,6 +374,10 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
       const current = editor.getContent();
       codeTextarea.value = current;
       submitField.value = current;
+
+      if (mediaInsert) {
+        mediaInsert(html);
+      }
     },
     async destroy() {
       await editor.remove();
