@@ -53,7 +53,46 @@ async function saveContent(form, statusNode) {
     return;
   }
 
-  statusNode.textContent = `Saved at ${new Date().toISOString()}\npostId=${responseBody.id}`;
+  statusNode.textContent = `Saved at ${new Date().toISOString()}\npostId=${responseBody.id}\nCreatedAt=${responseBody.createdAt}`;
+}
+
+async function reloadLatestPost(form, statusNode) {
+  const response = await fetch("/confirm", { cache: "no-store" });
+  const responseBody = await response.json().catch(() => ({}));
+  if (!response.ok || !responseBody.ok || !responseBody.post) {
+    statusNode.textContent = `Reload failed: ${JSON.stringify(responseBody)}`;
+    return;
+  }
+
+  const post = responseBody.post;
+  const titleField = form.querySelector("#post-title");
+  if (titleField instanceof HTMLInputElement) {
+    titleField.value = post.title || "";
+  }
+  const textarea = form.querySelector("[data-editor-visual], [data-editor-textarea]");
+  const codeTextarea = form.querySelector("[data-editor-code]");
+  const submitField = form.querySelector("[data-editor-submit-field]");
+  if (
+    !(textarea instanceof HTMLTextAreaElement)
+    || !(codeTextarea instanceof HTMLTextAreaElement)
+    || !(submitField instanceof HTMLTextAreaElement)
+  ) {
+    return;
+  }
+  textarea.value = post.content || "";
+  codeTextarea.value = post.content || "";
+  submitField.value = post.content || "";
+  statusNode.textContent = `Reloaded latest post id=${post.id}`;
+}
+
+function showToast(message, statusNode) {
+  const toast = document.getElementById("status-toast");
+  if (toast instanceof HTMLElement) {
+    toast.textContent = message;
+  }
+  if (statusNode) {
+    statusNode.textContent = message;
+  }
 }
 
 async function initClassicEditor() {
@@ -75,6 +114,8 @@ async function initClassicEditor() {
   const codeTab = root.querySelector('[data-editor-tab="code"]');
   const form = document.getElementById("post-editor-form");
   const refreshButton = document.getElementById("refresh");
+  const confirmButton = document.getElementById("confirm-latest");
+  const previewButton = document.getElementById("open-preview");
   if (
     !(textarea instanceof HTMLTextAreaElement)
     || !(codeTextarea instanceof HTMLTextAreaElement)
@@ -143,6 +184,24 @@ async function initClassicEditor() {
     if (statusNode) {
       statusNode.textContent = "Editor cleared.";
     }
+  });
+
+  confirmButton?.addEventListener("click", async () => {
+    if (!statusNode) {
+      return;
+    }
+    await reloadLatestPost(form, statusNode);
+  });
+
+  previewButton?.addEventListener("click", () => {
+    const htmlPayload = textarea.value.trim() || codeTextarea.value.trim() || "";
+    if (!htmlPayload) {
+      showToast("Preview is empty.", statusNode);
+      return;
+    }
+    const encoded = encodeURIComponent(htmlPayload);
+    window.open(`data:text/html,${encoded}`, "_blank", "noopener");
+    showToast("Opening preview in a new tab.", statusNode);
   });
 }
 

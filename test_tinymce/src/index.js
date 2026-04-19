@@ -360,6 +360,78 @@ function pageShell({ title = "", content = "" } = {}) {
 </html>`;
 }
 
+function cmsPageShell({ title = "", content = "" } = {}) {
+  const safeTitle = escapeHtml(String(title || ""));
+  const safeContent = String(content || "");
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CMS TinyMCE Editor</title>
+    <link rel="stylesheet" href="/editor-style.css" />
+    <script defer src="https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js"></script>
+  </head>
+  <body>
+    <main class="cms-root">
+      <header class="cms-topbar">
+        <a class="brand" href="/">CMS Suite</a>
+        <p class="route-path">Content / Editor</p>
+      </header>
+
+      <section class="cms-shell">
+        <section class="editor-card">
+          <div class="editor-head">
+            <div>
+              <p class="breadcrumb">Shared editor (cicerolms/customed_TinyMCE)</p>
+              <h1>Tinymce Content Editor</h1>
+            </div>
+            <div class="editor-head-meta">
+              <span class="chip">Classic editor mode</span>
+              <span class="chip chip-soft">Profile-driven styles</span>
+            </div>
+          </div>
+
+          <p class="intro">Media modal, Visual/Code tabs, search and yellow highlight are loaded from the shared package.</p>
+
+          <form id="post-editor-form" method="post" action="/save">
+            <div class="editor-layout">
+              <div class="editor-main">
+                <label for="post-title">Post Title</label>
+                <input id="post-title" name="post-title" class="title-input" value="${safeTitle}" placeholder="Enter post title" />
+
+                <label for="content-editor">Post Content</label>
+                ${renderClassicEditorHtml(safeContent)}
+              </div>
+
+              <aside class="editor-side">
+                <h2 class="side-title">Save Result</h2>
+                <p class="side-text">Submit payload and D1 metadata are displayed here.</p>
+                <pre id="save-status" aria-live="polite"></pre>
+                <button type="button" id="refresh" class="btn secondary-btn">Clear</button>
+                <button type="button" id="confirm-latest" class="btn secondary-btn">Reload latest from D1</button>
+              </aside>
+            </div>
+
+            <div class="editor-actions">
+              <button type="submit" id="save-button" class="btn primary-btn">Save</button>
+              <button type="button" id="open-preview" class="btn secondary-btn">View source</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7.8.0/tinymce.min.js" referrerpolicy="origin"></script>
+    <script type="module" src="/media-library.js"></script>
+    <script type="module" src="/editor-client.js"></script>
+  </body>
+</html>`;
+}
+
 async function insertPost(env, title, content) {
   ensureD1Binding(env);
   const createdAt = new Date().toISOString();
@@ -416,7 +488,7 @@ export default {
         const row = idParam
           ? await fetchPostById(env, Number(idParam))
           : await fetchLatestPost(env);
-        return htmlResponse(pageShell({
+        return htmlResponse(cmsPageShell({
           title: row?.title || "",
           content: row?.content || "",
         }));
