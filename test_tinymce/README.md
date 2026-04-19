@@ -14,10 +14,10 @@ for an editable page and persists submitted content to D1.
 
 1. The test worker serves a worker route `/editor-lib.js` that fetches the shared editor bundle from:
    - `https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/refs/heads/main/dist/index.js`
-   with a private GitHub token.
-2. Configure private token (required):
+   (public URL; token not required).
+2. Optional: configure private mirror token (only needed if using private GitHub repo):
    - `wrangler secret put CICEROLMS_GH_TOKEN`
-   - The token must have repository read access for `cicerolms/customed_TinyMCE`.
+   - The token should have repository read access for `cicerolms/customed_TinyMCE`.
 3. Create D1 binding:
    - `wrangler d1 create test_tinymce_db`
    - set `database_id` from that output in `test_tinymce/wrangler.toml`

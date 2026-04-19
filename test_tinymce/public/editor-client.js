@@ -63,7 +63,7 @@ async function initClassicEditor() {
   const statusNode = document.getElementById("save-status");
   if (!createClassicEditor) {
     if (statusNode) {
-      statusNode.textContent = "Editor bootstrap failed. Configure private import token and URL.";
+      statusNode.textContent = "Editor bootstrap failed: unable to load shared editor bundle.";
     }
     return;
   }

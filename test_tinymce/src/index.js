@@ -99,7 +99,7 @@ function normalizeKeyword(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-async function fetchPrivateEditorLib(env) {
+async function fetchSharedEditorLib(env) {
   const editorLibUrl = env?.CICEROLMS_EDITOR_LIB_URL || DEFAULT_EDITOR_LIB_URL;
   if (!editorLibUrl) {
     return jsonResponse({ ok: false, error: "missing-editor-lib-url" }, 500);
@@ -121,10 +121,10 @@ async function fetchPrivateEditorLib(env) {
   });
   if (!response.ok) {
     if (!token && response.status === 404) {
-      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (configure CICEROLMS_GH_TOKEN for private repo access)` }, response.status);
+      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (check shared URL branch/path or visibility)` }, response.status);
     }
     if (!token && response.status === 403) {
-      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (unauthorized for private repo)` }, response.status);
+      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (access denied, ensure URL is public or set CICEROLMS_GH_TOKEN)` }, response.status);
     }
     return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status}` }, response.status);
   }
@@ -462,7 +462,7 @@ export default {
       }
 
       if (pathname === "/editor-lib.js" && request.method === "GET") {
-        return fetchPrivateEditorLib(env);
+        return fetchSharedEditorLib(env);
       }
 
       if (pathname === "/assets" || pathname.startsWith("/assets/") || pathname === "/favicon.ico") {
