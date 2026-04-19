@@ -421,6 +421,10 @@ function openLinkCardDialog(editor, assetBaseUrl) {
     void assetBaseUrl;
 }
 function toggleEditorFullscreen(root, editor) {
+    if (typeof editor?.execCommand === "function") {
+        editor.execCommand("mceFullScreen");
+        return;
+    }
     const isActive = root.classList.toggle("is-fullscreen");
     document.body.classList.toggle("editor-fullscreen-active", isActive);
     editor.fire("ResizeEditor");

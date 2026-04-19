@@ -556,6 +556,10 @@ function openLinkCardDialog(editor: LegacyTinyMce, assetBaseUrl: string): void {
 }
 
 function toggleEditorFullscreen(root: HTMLElement, editor: LegacyTinyMce): void {
+  if (typeof editor?.execCommand === "function") {
+    editor.execCommand("mceFullScreen");
+    return;
+  }
   const isActive = root.classList.toggle("is-fullscreen");
   document.body.classList.toggle("editor-fullscreen-active", isActive);
   editor.fire("ResizeEditor");
