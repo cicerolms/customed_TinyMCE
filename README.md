@@ -93,6 +93,7 @@ Initialize with:
 - optional `styleProfileUrl`
 - optional translated labels
 - optional `i18n`
+- optional `primeToolbarOnInit`
 
 `styleProfile` fields:
 
@@ -119,6 +120,12 @@ Returned editor instance methods:
 - `setContent(html)`
 - `syncToTextarea()`
 - `destroy()`
+
+`primeToolbarOnInit`:
+
+- default: `true`
+- mounts the inline TinyMCE toolbar into a fixed host and primes the toolbar once on boot when the page has not already focused another control
+- set to `false` if your host app wants to control initial focus behavior itself
 
 ## Frontend locale switching
 
@@ -166,6 +173,7 @@ Compatibility:
   <section data-classic-editor>
     <button type="button" data-editor-tab="visual">Visual</button>
     <button type="button" data-editor-tab="code">Code</button>
+    <div data-editor-toolbar-host class="classic-editor-toolbar-host"></div>
     <textarea
       id="content"
       name="content"
@@ -179,6 +187,8 @@ Compatibility:
 ```
 
 The `[data-editor-fragment]` container is the inline visual review surface. If you omit it, the package creates one next to the textarea automatically.
+
+The `[data-editor-toolbar-host]` container is optional but recommended. When present, the package mounts the inline TinyMCE menubar and toolbar there so it stays visible as a normal block above the fragment. If omitted, the package creates one automatically before the fragment.
 
 `bootstrapClassicEditor()` also auto-runs on page load when `[data-classic-editor]` is present, so a host app can either call it explicitly or rely on the built-in auto-boot path.
 

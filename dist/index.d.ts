@@ -20,6 +20,7 @@ export type ClassicEditorConfig = {
     styleProfileUrl?: string;
     labels?: ClassicEditorLabels;
     i18n?: ClassicEditorI18nConfig;
+    primeToolbarOnInit?: boolean;
 };
 export type ClassicEditorInstance = {
     switchMode(nextMode: "visual" | "code"): Promise<void>;

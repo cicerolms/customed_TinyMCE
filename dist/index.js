@@ -214,6 +214,18 @@ function ensureEditorFragmentHost(target, textarea, className) {
     fragment.hidden = true;
     return fragment;
 }
+function ensureToolbarHost(target, fragment) {
+    const existing = target.querySelector("[data-editor-toolbar-host]");
+    const host = existing instanceof HTMLElement ? existing : document.createElement("div");
+    if (!(existing instanceof HTMLElement)) {
+        host.setAttribute("data-editor-toolbar-host", "true");
+        host.className = "classic-editor-toolbar-host";
+        fragment.insertAdjacentElement("beforebegin", host);
+    }
+    const mergedClasses = new Set(["classic-editor-toolbar-host", ...host.className.split(/\s+/).filter(Boolean)]);
+    host.className = Array.from(mergedClasses).join(" ");
+    return host;
+}
 function ensureElementId(element, fallbackId) {
     if (!element.id) {
         element.id = fallbackId;
@@ -295,6 +307,10 @@ function registerLegacyEditorI18n(tinymce, lang) {
     return normalized;
 }
 function localizeLegacyMenubar(editor, i18n) {
+    const container = editor?.getContainer?.();
+    if (!(container instanceof HTMLElement)) {
+        return;
+    }
     const labels = [
         translate("editor.menu.file", "ファイル", i18n),
         translate("editor.menu.edit", "編集", i18n),
@@ -304,7 +320,7 @@ function localizeLegacyMenubar(editor, i18n) {
         translate("editor.menu.tools", "ツール", i18n),
         translate("editor.menu.table", "テーブル", i18n),
     ];
-    const nodes = Array.from(editor.getContainer().querySelectorAll(".mce-menubar .mce-menubtn span"));
+    const nodes = Array.from(container.querySelectorAll(".mce-menubar .mce-menubtn span"));
     nodes.forEach((node, index) => {
         if (!(node instanceof HTMLElement))
             return;
@@ -497,6 +513,7 @@ export async function createClassicEditor(config) {
     const visualTab = target.querySelector('[data-editor-tab="visual"]');
     const codeTab = target.querySelector('[data-editor-tab="code"]');
     const wrap = resolveLegacyEditorWrap(target) || target;
+    const shouldPrimeToolbarOnInit = config.primeToolbarOnInit !== false;
     if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement)) {
         throw new Error("Classic editor target is missing the visual/code tab buttons.");
     }
@@ -514,15 +531,18 @@ export async function createClassicEditor(config) {
     }
     const resolvedProfile = profileStack.reduce((current, next) => mergeProfiles(current, next), {});
     const editorBodyClass = resolveReviewBodyClass(resolvedProfile);
+    const editorId = ensureElementId(textarea, `classic-editor-${Math.random().toString(36).slice(2, 10)}`);
     const fragment = ensureEditorFragmentHost(target, textarea, editorBodyClass);
-    const fragmentId = ensureElementId(fragment, `${textarea.id || "classic-editor"}-visual`);
+    const toolbarHost = ensureToolbarHost(target, fragment);
+    const toolbarHostId = ensureElementId(toolbarHost, `${editorId}-toolbar-host`);
+    const fragmentId = ensureElementId(fragment, `${editorId}-visual`);
     const tinymce = await waitForLegacyTinyMce(assetBaseUrl);
     await loadLegacyPluginScripts(tinymce, assetBaseUrl);
     let activeI18n = resolveEditorI18n(config.i18n);
     let editorLang = registerLegacyEditorI18n(tinymce, activeI18n.lang);
     let editor = null;
     let mode = "visual";
-    const editorId = textarea.id;
+    let toolbarPrimed = false;
     const syncTextareaFromEditor = () => {
         if (mode !== "visual" || !editor || editor.removed) {
             return;
@@ -549,6 +569,8 @@ export async function createClassicEditor(config) {
         target: fragment,
         inline: true,
         hidden_input: false,
+        toolbar_persist: true,
+        fixed_toolbar_container: `#${toolbarHostId}`,
         language: editorLang,
         theme: "modern",
         skin: "lightgray",
@@ -589,6 +611,20 @@ export async function createClassicEditor(config) {
             editor = instance;
             syncTextareaFromEditor();
             localizeLegacyMenubar(instance, activeI18n);
+            if (!toolbarPrimed && shouldPrimeToolbarOnInit) {
+                toolbarPrimed = true;
+                window.setTimeout(() => {
+                    if (mode !== "visual" || editor?.removed || document.activeElement !== document.body) {
+                        return;
+                    }
+                    try {
+                        instance.focus();
+                    }
+                    catch {
+                        // Ignore focus failures during boot; the toolbar host will still exist.
+                    }
+                }, 150);
+            }
         },
         setup(instance) {
             instance.addMenuItem("classiceditoraddmedia", {
