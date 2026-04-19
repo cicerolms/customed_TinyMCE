@@ -10,4 +10,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "test_tinymce_db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "3760b45a-1ca7-4be5-9df6-af5a82986c34"
