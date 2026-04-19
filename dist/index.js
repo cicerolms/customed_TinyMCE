@@ -110,6 +110,7 @@ const LEGACY_EDITOR_UI_TRANSLATIONS = {
 };
 const tinyMceLoaderCache = new Map();
 const legacyPluginLoaderCache = new Map();
+const legacyWordpressPluginOverrideCache = new Map();
 const registeredEditorI18n = new Set();
 function resolveNode(node) {
     if (!node)
@@ -258,6 +259,16 @@ async function waitForLegacyTinyMce(assetBaseUrl) {
         if (!win.tinymce) {
             throw new Error("Legacy TinyMCE did not initialize");
         }
+        const overrideUrl = `${assetBaseUrl}/vendor/legacy-classic-editor/wp-includes/js/tinymce/plugins/wordpress/plugin.js`;
+        let overridePromise = legacyWordpressPluginOverrideCache.get(assetBaseUrl);
+        if (!overridePromise) {
+            overridePromise = loadScript(overrideUrl).catch((error) => {
+                legacyWordpressPluginOverrideCache.delete(assetBaseUrl);
+                throw error;
+            });
+            legacyWordpressPluginOverrideCache.set(assetBaseUrl, overridePromise);
+        }
+        await overridePromise;
         win.tinymce.baseURL = tinyMceBaseUrl;
         win.tinymce.baseURI = new URL(`${tinyMceBaseUrl}/`, window.location.origin).toString();
         win.tinymce.suffix = ".min";

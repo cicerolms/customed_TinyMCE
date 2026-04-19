@@ -15,6 +15,63 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 		hasWpautop = ( wp && wp.editor && wp.editor.autop && editor.getParam( 'wpautop', true ) ),
 		wpTooltips = false;
 
+	function getInlineStyleBlocks() {
+		return Array.isArray( editor._wpInlineStyleBlocks ) ? editor._wpInlineStyleBlocks : [];
+	}
+
+	function clearInlineStyleBlocks() {
+		var head, nodes;
+
+		if ( ! editor.inline || ! editor.getDoc() || ! editor.getDoc().head ) {
+			return;
+		}
+
+		head = editor.getDoc().head;
+		nodes = head.querySelectorAll( 'style[data-wp-inline-style-editor="' + editor.id + '"]' );
+		each( nodes, function( node ) {
+			if ( node && node.parentNode ) {
+				node.parentNode.removeChild( node );
+			}
+		} );
+	}
+
+	function preserveInlineStyleBlocks( content ) {
+		var matches = [];
+
+		if ( ! editor.inline || ! content || content.indexOf( '<style' ) === -1 ) {
+			return content;
+		}
+
+		content = content.replace( /<style[^>]*>[\s\S]*?<\/style>/gi, function( match ) {
+			matches.push( match );
+			return '';
+		} );
+
+		editor._wpInlineStyleBlocks = matches;
+		clearInlineStyleBlocks();
+
+		if ( editor.getDoc() && editor.getDoc().head ) {
+			each( matches, function( match ) {
+				editor.getDoc().head.insertAdjacentHTML(
+					'beforeend',
+					match.replace( /<style/i, '<style data-wp-inline-style-editor="' + editor.id + '"' )
+				);
+			} );
+		}
+
+		return content;
+	}
+
+	function restoreInlineStyleBlocks( content ) {
+		var blocks = getInlineStyleBlocks();
+
+		if ( ! editor.inline || ! blocks.length ) {
+			return content;
+		}
+
+		return blocks.join( '' ) + content;
+	}
+
 	if ( $ ) {
 		// Runs as soon as TinyMCE has started initializing, while plugins are loading.
 		// Handlers attached after the `tinymce.init()` call may not get triggered for this instance.
@@ -137,10 +194,14 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 				}
 			}
 
+			if ( event.content.indexOf( '<style' ) !== -1 ) {
+				event.content = preserveInlineStyleBlocks( event.content );
+			}
+
 			if ( event.content.indexOf( '<script' ) !== -1 || event.content.indexOf( '<style' ) !== -1 ) {
 				event.content = event.content.replace( /<(script|style)[^>]*>[\s\S]*?<\/\1>/g, function( match, tag ) {
 					if ( tag === 'style' && editor.inline ) {
-						return match;
+						return '';
 					}
 					return '<img ' +
 						'src="' + tinymce.Env.transparentSrc + '" ' +
@@ -192,8 +253,15 @@ tinymce.PluginManager.add( 'wordpress', function( editor ) {
 
 				return string || image;
 			});
+
+			event.content = restoreInlineStyleBlocks( event.content );
 		}
 	});
+
+	editor.on( 'remove', function() {
+		clearInlineStyleBlocks();
+		editor._wpInlineStyleBlocks = [];
+	} );
 
 	// Display the tag name instead of img in element path.
 	editor.on( 'ResolveName', function( event ) {
