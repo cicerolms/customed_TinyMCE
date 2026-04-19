@@ -1,0 +1,78 @@
+@media (max-width: 768px) {
+  .page-shell {
+    margin: 0;
+    padding: 16px;
+  }
+}
+
+.page-shell {
+  max-width: 980px;
+  margin: 24px auto;
+  font-family: "Noto Sans JP", Arial, sans-serif;
+}
+
+h1 {
+  margin: 0 0 16px;
+}
+
+.editor-card {
+  border: 1px solid #d6dbe3;
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.editor-card + .status {
+  margin-top: 14px;
+}
+
+.classic-editor-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.classic-editor {
+  min-height: 460px;
+}
+
+.classic-editor[data-hidden="true"] {
+  display: none;
+}
+
+.editor-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  background: #0f6c8f;
+  color: #fff;
+  border: 1px solid #0f6c8f;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.btn.secondary {
+  background: #fff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+label {
+  font-weight: 600;
+}
+
+textarea#editor-submit {
+  display: none;
+}
+
+.result pre {
+  border: 1px dashed #d6dbe3;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  max-height: 220px;
+  overflow: auto;
+}
+

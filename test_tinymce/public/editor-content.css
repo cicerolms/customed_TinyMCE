@@ -1,0 +1,24 @@
+.cms-editor-content {
+  margin: 0;
+  padding: 16px;
+  color: #111827;
+  font-family: "Noto Sans", "Segoe UI", Arial, sans-serif;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.cms-editor-content h1 {
+  font-size: 34px;
+  margin: 0 0 24px;
+}
+
+.cms-editor-content h2,
+.cms-editor-content h3,
+.cms-editor-content h4,
+.cms-editor-content h5 {
+  color: #0f172a;
+}
+
+.cms-editor-content p {
+  margin: 0 0 20px;
+}
