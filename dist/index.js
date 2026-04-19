@@ -38,7 +38,6 @@ const DEFAULT_EDITOR_STYLE_PROFILE = {
     extendCssUrl: "",
     css: {
         self: "",
-        base: "",
         extend: "",
     },
 };
@@ -244,7 +243,6 @@ function mergeProfiles(base, override) {
         contentStyle: override.contentStyle ?? base.contentStyle,
         css: {
             self: override.css?.self ?? base.css?.self,
-            base: override.css?.base ?? base.css?.base,
             extend: override.css?.extend ?? base.css?.extend,
         },
     };
@@ -286,7 +284,6 @@ async function loadStyleProfile(profileUrl) {
         const css = profile.css;
         next.css = {
             self: typeof css.self === "string" ? css.self : "",
-            base: typeof css.base === "string" ? css.base : "",
             extend: typeof css.extend === "string" ? css.extend : "",
         };
     }
@@ -615,7 +612,6 @@ export async function createClassicEditor(config) {
         .map((url) => `${normalizeCssUrl(url)}?v=${LEGACY_EDITOR_VERSION}`);
     const contentStyle = [
         resolvedProfile.css?.self,
-        resolvedProfile.css?.base,
         resolvedProfile.css?.extend,
         resolvedProfile.contentStyle,
         resolvedProfile.inlineCss,

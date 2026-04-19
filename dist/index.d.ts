@@ -10,7 +10,6 @@ export type ClassicEditorI18nConfig = {
 };
 export type EditorStyleProfileCss = {
     self?: string;
-    base?: string;
     extend?: string;
 };
 export type EditorStyleProfile = {

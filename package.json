@@ -1,6 +1,6 @@
 {
   "name": "@cicerolms/vietwork-classic-editor",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "description": "Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,15 +14,13 @@
     "./tailwind.css": "./assets/tailwind.css",
     "./tailwind-preset": "./tailwind.preset.cjs",
     "./styles.css": "./styles.css",
-    "./editor-style-self.css": "./editor-style-self.css",
-    "./editor-style-base.css": "./editor-style-base.css"
+    "./editor-style-self.css": "./editor-style-self.css"
   },
   "files": [
     "dist",
     "assets/tailwind.css",
     "styles.css",
     "editor-style-self.css",
-    "editor-style-base.css",
     "tailwind.preset.cjs",
     "README.md",
     "LICENSE"

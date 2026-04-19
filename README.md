@@ -6,7 +6,7 @@ This package provides a reusable classic TinyMCE editing stack for SSR projects:
 
 - Visual and inline source editing
 - Fullscreen editing
-- Search with hit count and next/previous navigation
+- TinyMCE search and replace through the legacy plugin menu
 - Reusable toolbar actions
 - Five shared utility toolbar buttons that wrap selection with `utility_1` to `utility_5`
 - Custom inline formatting hooks
@@ -52,7 +52,6 @@ At minimum, your app needs to provide:
 - TinyMCE legacy assets under `/assets`
 - a worker-served `styles.css`
 - `/editor-style-self.css`
-- `/editor-style-base.css`
 - `/editor-style-profile.css`
 - `/editor-style-profile.json`
 
@@ -83,6 +82,13 @@ Main exports:
 - `bootstrapClassicEditor(...)`
 - `dispatchClassicEditorI18n(...)`
 
+Package asset exports:
+
+- `@cicerolms/vietwork-classic-editor/styles.css`
+- `@cicerolms/vietwork-classic-editor/editor-style-self.css`
+- `@cicerolms/vietwork-classic-editor/tailwind.css`
+- `@cicerolms/vietwork-classic-editor/tailwind-preset`
+
 Initialize with:
 
 - `target`
@@ -94,10 +100,11 @@ Initialize with:
 
 `styleProfile` fields:
 
-- `contentCssUrls`: array of CSS URLs.
+- `contentCssUrls`: array of CSS URLs passed to TinyMCE `content_css` in order.
 - `bodyClass`: TinyMCE `body_class` value.
 - `blockFormats`: TinyMCE `block_formats` value.
-- `extendCssUrl`: worker-local site-specific CSS file loaded after shared base CSS.
+- `css.self` / `css.extend`: inline CSS strings appended to TinyMCE `content_style`.
+- `extendCssUrl`: compatibility field that can stay in your JSON contract, but this package does not fetch it automatically.
 - `inlineCss` / `contentStyle`: legacy compatibility fields.
 
 `i18n` fields:
@@ -172,6 +179,8 @@ Compatibility:
 <div id="save-status"></div>
 ```
 
+`bootstrapClassicEditor()` also auto-runs on page load when `[data-classic-editor]` is present, so a host app can either call it explicitly or rely on the built-in auto-boot path.
+
 ## Tailwind integration
 
 The shared repo now owns a Tailwind-authored CSS asset:
@@ -186,28 +195,24 @@ Recommended consuming-worker flow:
 2. Build your worker-owned `styles.css` during deploy.
 3. Serve that built `styles.css` locally from the worker.
 4. Link public pages to `styles.css`.
-5. Point TinyMCE `contentCssUrls` at the same `styles.css`.
-6. Expose worker CSS routes for the profile split:
+5. Expose worker CSS routes for the profile split:
    - `editor-style-self.css` from shared repo `editor-style-self.css`
-   - `editor-style-base.css` from shared repo `editor-style-base.css`
-   - `editor-style-profile.css` from the worker-local `extendCssUrl`
-7. Point TinyMCE `contentCssUrls` at all four worker-served stylesheets in order:
+   - `editor-style-profile.css` from your worker-local extend stylesheet
+6. Point TinyMCE `contentCssUrls` at the worker-served stylesheets in order:
    - `/styles.css`
    - `/editor-style-self.css`
-   - `/editor-style-base.css`
    - `/editor-style-profile.css`
-8. Link public pages to:
+7. Link public pages to:
    - `/styles.css`
    - `/editor-style-profile.css`
-9. Keep reusable cross-site CSS in shared repo files and keep only the site-specific extend CSS in the worker repo.
-10. Use the shared `U1` to `U5` toolbar buttons to apply `.utility_1` to `.utility_5`, then style those classes in the worker-local extend CSS.
+8. Keep reusable cross-site CSS in shared repo files and keep only the site-specific extend CSS in the worker repo.
+9. Use the shared `U1` to `U5` toolbar buttons to apply `.utility_1` to `.utility_5`, then style those classes in the worker-local extend CSS.
 
 Recommended worker style split:
 
 - shared package:
   - `styles.css`
   - `editor-style-self.css`
-  - `editor-style-base.css`
 - app repo:
   - `editor-style-extend.css`
   - `editor-style-profile.json`
@@ -218,8 +223,9 @@ Recommended worker style split:
 2. Bundle this package into your browser entrypoint.
 3. Pass `i18n.lang` and `i18n.t` from your frontend locale store when you initialize the editor.
 4. Build and serve a worker-owned `styles.css` from the shared Tailwind asset.
-5. Serve worker CSS routes for shared `self`, shared `base`, and worker-local `extend`.
+5. Serve worker CSS routes for shared `self` and worker-local `extend`.
 6. Pass those local stylesheet URLs in `contentCssUrls` so the editor iframe and public page stay in sync.
+7. If you keep `extendCssUrl` in the JSON payload for your own app code, treat it as app metadata rather than something this package resolves on its own.
 
 Example `editor-style-profile.json`:
 
@@ -228,7 +234,6 @@ Example `editor-style-profile.json`:
   "contentCssUrls": [
     "/styles.css",
     "/editor-style-self.css",
-    "/editor-style-base.css",
     "/editor-style-profile.css"
   ],
   "blockFormats": "Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre",
@@ -241,9 +246,10 @@ Suggested worker routes:
 
 - `/editor-lib.js` -> shared repo `dist/index.js`
 - `/editor-style-self.css` -> shared repo `editor-style-self.css`
-- `/editor-style-base.css` -> shared repo `editor-style-base.css`
 - `/editor-style-profile.css` -> your app-local `editor-style-extend.css`
 - `/styles.css` -> your worker-built Tailwind output
+
+The important integration point is the `contentCssUrls` array. The editor iframe only loads stylesheets that are either part of the default shared stack or explicitly listed there.
 
 ## Utility buttons
 
