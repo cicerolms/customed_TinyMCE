@@ -218,10 +218,15 @@ function ensureEditorFragmentHost(target, textarea, className) {
 function ensureToolbarHost(target, fragment) {
     const existing = target.querySelector("[data-editor-toolbar-host]");
     const host = existing instanceof HTMLElement ? existing : document.createElement("div");
+    const shellWrap = fragment.closest(".classic-editor-shell-wrap, .wp-editor-wrap") ||
+        fragment.parentElement ||
+        target;
     if (!(existing instanceof HTMLElement)) {
         host.setAttribute("data-editor-toolbar-host", "true");
         host.className = "classic-editor-toolbar-host";
-        fragment.insertAdjacentElement("beforebegin", host);
+    }
+    if (host.previousElementSibling !== null || host.parentElement !== shellWrap.parentElement) {
+        shellWrap.insertAdjacentElement("beforebegin", host);
     }
     const mergedClasses = new Set(["classic-editor-toolbar-host", ...host.className.split(/\s+/).filter(Boolean)]);
     host.className = Array.from(mergedClasses).join(" ");
@@ -565,13 +570,317 @@ export async function createClassicEditor(config) {
         }
         textarea.value = String(editor.getContent?.() || fragment.innerHTML || "");
     };
+    const dispatchCodeInput = () => {
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    };
     const syncTextareaFromCode = () => {
         if (mode === "code") {
-            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+            dispatchCodeInput();
         }
     };
     const syncFragmentFromTextarea = () => {
         fragment.innerHTML = textarea.value || "";
+    };
+    const selectCodeRange = (start, end) => {
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+        const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight || "24") || 24;
+        const prefix = textarea.value.slice(0, start);
+        const lineCount = prefix.split("\n").length - 1;
+        textarea.scrollTop = Math.max(0, lineCount * lineHeight - textarea.clientHeight / 2);
+    };
+    const isWordChar = (value) => /[A-Za-z0-9_]/.test(value);
+    const isWholeWordMatch = (source, start, length) => {
+        const before = start > 0 ? source[start - 1] : "";
+        const after = start + length < source.length ? source[start + length] : "";
+        return !isWordChar(before) && !isWordChar(after);
+    };
+    const findInCode = (query, matchCase, direction, allowWrap = true, wholeWord = false) => {
+        if (!query)
+            return -1;
+        const source = textarea.value;
+        const haystack = matchCase ? source : source.toLowerCase();
+        const needle = matchCase ? query : query.toLowerCase();
+        const fromIndex = direction === "next"
+            ? textarea.selectionEnd
+            : Math.max(0, textarea.selectionStart - (textarea.selectionStart === textarea.selectionEnd ? 1 : 0));
+        const findCandidate = (startIndex) => {
+            if (direction === "next") {
+                let index = haystack.indexOf(needle, startIndex);
+                while (index !== -1) {
+                    if (!wholeWord || isWholeWordMatch(source, index, query.length)) {
+                        return index;
+                    }
+                    index = haystack.indexOf(needle, index + 1);
+                }
+                return -1;
+            }
+            let index = haystack.lastIndexOf(needle, startIndex);
+            while (index !== -1) {
+                if (!wholeWord || isWholeWordMatch(source, index, query.length)) {
+                    return index;
+                }
+                index = haystack.lastIndexOf(needle, index - 1);
+            }
+            return -1;
+        };
+        const directIndex = findCandidate(fromIndex);
+        if (directIndex !== -1) {
+            return directIndex;
+        }
+        if (!allowWrap) {
+            return -1;
+        }
+        return direction === "next" ? findCandidate(0) : findCandidate(haystack.length - 1);
+    };
+    const findCodeQuery = (query, matchCase, direction = "next", wholeWord = false) => {
+        const index = findInCode(query, matchCase, direction, true, wholeWord);
+        if (index === -1) {
+            return false;
+        }
+        selectCodeRange(index, index + query.length);
+        return true;
+    };
+    const selectionMatchesQuery = (query, matchCase, wholeWord) => {
+        const selectionStart = textarea.selectionStart ?? 0;
+        const selectionEnd = textarea.selectionEnd ?? selectionStart;
+        const selected = textarea.value.slice(selectionStart, selectionEnd);
+        if (!selected)
+            return false;
+        if ((matchCase ? selected : selected.toLowerCase()) !== (matchCase ? query : query.toLowerCase())) {
+            return false;
+        }
+        if (wholeWord && !isWholeWordMatch(textarea.value, selectionStart, query.length)) {
+            return false;
+        }
+        return true;
+    };
+    const replaceCurrentSelection = (query, replacement, matchCase, wholeWord) => {
+        if (!selectionMatchesQuery(query, matchCase, wholeWord)) {
+            const found = findCodeQuery(query, matchCase, "next", wholeWord);
+            if (!found) {
+                return false;
+            }
+        }
+        const start = textarea.selectionStart ?? 0;
+        const end = textarea.selectionEnd ?? start;
+        textarea.setRangeText(replacement, start, end, "select");
+        dispatchCodeInput();
+        selectCodeRange(start, start + replacement.length);
+        return true;
+    };
+    const replaceAllInCode = (query, replacement, matchCase, wholeWord) => {
+        if (!query)
+            return 0;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = wholeWord ? `\\b${escaped}\\b` : escaped;
+        const flags = matchCase ? "g" : "gi";
+        const regex = new RegExp(pattern, flags);
+        const matches = textarea.value.match(regex);
+        if (!matches?.length) {
+            return 0;
+        }
+        textarea.value = textarea.value.replace(regex, replacement);
+        dispatchCodeInput();
+        textarea.focus();
+        return matches.length;
+    };
+    const openCodeSearchDialog = (instance) => {
+        const selectedText = textarea.value.slice(textarea.selectionStart, textarea.selectionEnd).trim();
+        const initialValue = selectedText || "";
+        const title = translate("editor.search.title", "Find and replace", activeI18n);
+        const findLabel = translate("editor.search.find", "Find", activeI18n);
+        const replaceLabel = translate("editor.search.replaceWith", "Replace with", activeI18n);
+        const matchCaseLabel = translate("editor.search.matchCase", "Match case", activeI18n);
+        const wholeWordLabel = translate("editor.search.wholeWords", "Whole words", activeI18n);
+        const findButtonLabel = translate("editor.search.findButton", "Find", activeI18n);
+        const replaceButtonLabel = translate("editor.search.replaceButton", "Replace", activeI18n);
+        const replaceAllButtonLabel = translate("editor.search.replaceAllButton", "Replace all", activeI18n);
+        const previousLabel = translate("editor.search.previous", "Prev", activeI18n);
+        const nextLabel = translate("editor.search.next", "Next", activeI18n);
+        const emptyQueryMessage = translate("editor.search.empty", "Enter a search term.", activeI18n);
+        const notFoundMessage = translate("editor.search.notFound", "Could not find the specified string.", activeI18n);
+        const replaceCountTemplate = translate("editor.search.replaceCount", "{count} matches replaced.", activeI18n);
+        let dialog;
+        const readState = () => {
+            const state = dialog?.toJSON?.() || {};
+            return {
+                query: String(state.codeSearchQuery || "").trim(),
+                replacement: String(state.codeReplaceQuery || ""),
+                matchCase: Boolean(state.codeSearchMatchCase),
+                wholeWord: Boolean(state.codeSearchWholeWords),
+            };
+        };
+        dialog = instance?.windowManager?.open?.({
+            title,
+            body: [
+                {
+                    type: "textbox",
+                    name: "codeSearchQuery",
+                    label: findLabel,
+                    value: initialValue,
+                    autofocus: true,
+                },
+                {
+                    type: "textbox",
+                    name: "codeReplaceQuery",
+                    label: replaceLabel,
+                    value: "",
+                },
+                {
+                    type: "checkbox",
+                    name: "codeSearchMatchCase",
+                    label: matchCaseLabel,
+                    checked: false,
+                },
+                {
+                    type: "checkbox",
+                    name: "codeSearchWholeWords",
+                    label: wholeWordLabel,
+                    checked: false,
+                },
+            ],
+            buttons: [
+                {
+                    text: findButtonLabel,
+                    subtype: "primary",
+                    onclick() {
+                        const { query, matchCase, wholeWord } = readState();
+                        if (!query) {
+                            instance?.windowManager?.alert?.(emptyQueryMessage);
+                            return;
+                        }
+                        const found = findCodeQuery(query, matchCase, "next", wholeWord);
+                        if (!found) {
+                            instance?.windowManager?.alert?.(notFoundMessage);
+                        }
+                    },
+                },
+                {
+                    text: replaceButtonLabel,
+                    onclick() {
+                        const { query, replacement, matchCase, wholeWord } = readState();
+                        if (!query) {
+                            instance?.windowManager?.alert?.(emptyQueryMessage);
+                            return;
+                        }
+                        const replaced = replaceCurrentSelection(query, replacement, matchCase, wholeWord);
+                        if (!replaced) {
+                            instance?.windowManager?.alert?.(notFoundMessage);
+                            return;
+                        }
+                        findCodeQuery(query, matchCase, "next", wholeWord);
+                    },
+                },
+                {
+                    text: replaceAllButtonLabel,
+                    onclick() {
+                        const { query, replacement, matchCase, wholeWord } = readState();
+                        if (!query) {
+                            instance?.windowManager?.alert?.(emptyQueryMessage);
+                            return;
+                        }
+                        const replacedCount = replaceAllInCode(query, replacement, matchCase, wholeWord);
+                        if (!replacedCount) {
+                            instance?.windowManager?.alert?.(notFoundMessage);
+                            return;
+                        }
+                        instance?.windowManager?.alert?.(replaceCountTemplate.replace("{count}", String(replacedCount)));
+                    },
+                },
+                {
+                    text: previousLabel,
+                    onclick() {
+                        const { query, matchCase, wholeWord } = readState();
+                        if (!query) {
+                            instance?.windowManager?.alert?.(emptyQueryMessage);
+                            return;
+                        }
+                        const found = findCodeQuery(query, matchCase, "prev", wholeWord);
+                        if (!found) {
+                            instance?.windowManager?.alert?.(notFoundMessage);
+                        }
+                    },
+                },
+                {
+                    text: nextLabel,
+                    onclick() {
+                        const { query, matchCase, wholeWord } = readState();
+                        if (!query) {
+                            instance?.windowManager?.alert?.(emptyQueryMessage);
+                            return;
+                        }
+                        const found = findCodeQuery(query, matchCase, "next", wholeWord);
+                        if (!found) {
+                            instance?.windowManager?.alert?.(notFoundMessage);
+                        }
+                    },
+                },
+            ],
+            onsubmit(api) {
+                const query = String(api?.data?.codeSearchQuery || "").trim();
+                if (!query) {
+                    instance?.windowManager?.alert?.(emptyQueryMessage);
+                    return false;
+                }
+                const found = findCodeQuery(query, Boolean(api?.data?.codeSearchMatchCase), "next", Boolean(api?.data?.codeSearchWholeWords));
+                if (!found) {
+                    instance?.windowManager?.alert?.(notFoundMessage);
+                }
+                return false;
+            },
+            onclose() {
+                textarea.focus();
+            },
+        });
+        const inputApi = dialog?.find?.("#codeSearchQuery")?.[0];
+        inputApi?.focus?.();
+        inputApi?.select?.();
+    };
+    const openSearchReplace = (instance) => {
+        if (isCodeSurfaceActive()) {
+            openCodeSearchDialog(instance);
+            return;
+        }
+        instance.execCommand("SearchReplace");
+    };
+    const isCodeSurfaceActive = () => {
+        if (textarea.hidden) {
+            return false;
+        }
+        const style = window.getComputedStyle(textarea);
+        return style.display !== "none" && style.visibility !== "hidden";
+    };
+    const isSearchReplaceTrigger = (eventTarget) => {
+        if (!(eventTarget instanceof Element)) {
+            return false;
+        }
+        const control = eventTarget.closest(".mce-btn, .mce-menu-item");
+        if (!(control instanceof HTMLElement)) {
+            return false;
+        }
+        const label = [
+            control.getAttribute("title"),
+            control.getAttribute("aria-label"),
+            control.textContent,
+            control.querySelector(".mce-ico")?.getAttribute("class"),
+        ]
+            .filter(Boolean)
+            .join(" ");
+        return /find and replace|searchreplace|検索と置換|tìm và thay thế/i.test(label);
+    };
+    const handleCodeSearchShortcut = (event) => {
+        if (!isCodeSurfaceActive())
+            return;
+        if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.key.toLowerCase() !== "f") {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        if (editor && !editor.removed) {
+            openCodeSearchDialog(editor);
+        }
     };
     const renderMode = () => {
         wrap.classList.toggle("tmce-active", mode === "visual");
@@ -580,6 +889,15 @@ export async function createClassicEditor(config) {
         codeTab.setAttribute("aria-pressed", String(mode === "code"));
         fragment.hidden = mode !== "visual";
         textarea.hidden = mode === "visual";
+        if (mode === "code") {
+            // Force raw HTML mode to occupy the full editor width even if host CSS misses the textarea rule.
+            textarea.style.display = "block";
+            textarea.style.width = "100%";
+        }
+        else {
+            textarea.style.removeProperty("display");
+            textarea.style.removeProperty("width");
+        }
     };
     const getLegacyConfig = () => ({
         target: fragment,
@@ -644,20 +962,43 @@ export async function createClassicEditor(config) {
         },
         setup(instance) {
             const openInlineSourceMode = () => {
-                void switchMode("code");
+                void switchMode(mode === "code" ? "visual" : "code");
+            };
+            const registerInlineSourceEntry = (name) => {
+                instance.addButton(name, {
+                    tooltip: sourceCodeLabel(activeI18n),
+                    icon: "code",
+                    onclick: openInlineSourceMode,
+                });
+                instance.addMenuItem(name, {
+                    text: sourceCodeLabel(activeI18n),
+                    icon: "code",
+                    context: "view tools",
+                    onclick: openInlineSourceMode,
+                });
             };
             instance.addCommand("mceCodeEditor", openInlineSourceMode);
             instance.addCommand("classiceditorcode", openInlineSourceMode);
-            instance.addButton("classiceditorcode", {
-                tooltip: sourceCodeLabel(activeI18n),
-                icon: "code",
-                onclick: openInlineSourceMode,
+            registerInlineSourceEntry("code");
+            registerInlineSourceEntry("classiceditorcode");
+            instance.addButton("searchreplace", {
+                tooltip: "Find and replace",
+                icon: "searchreplace",
+                onclick() {
+                    openSearchReplace(instance);
+                },
             });
-            instance.addMenuItem("classiceditorcode", {
-                text: sourceCodeLabel(activeI18n),
-                icon: "code",
-                context: "view tools",
-                onclick: openInlineSourceMode,
+            instance.addMenuItem("searchreplace", {
+                text: "Find and replace",
+                icon: "searchreplace",
+                separator: "before",
+                context: "edit",
+                onclick() {
+                    openSearchReplace(instance);
+                },
+            });
+            instance.shortcuts.add("Meta+F", "", () => {
+                openSearchReplace(instance);
             });
             instance.addMenuItem("classiceditoraddmedia", {
                 text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加"), activeI18n),
@@ -758,7 +1099,7 @@ export async function createClassicEditor(config) {
         if (nextMode === mode)
             return;
         if (nextMode === "code") {
-            removeVisualEditor();
+            syncTextareaFromEditor();
             mode = "code";
             renderMode();
             textarea.focus();
@@ -766,9 +1107,15 @@ export async function createClassicEditor(config) {
             return;
         }
         mode = "visual";
-        syncFragmentFromTextarea();
         renderMode();
-        await ensureVisualEditor();
+        const activeEditor = await ensureVisualEditor();
+        if (activeEditor && !activeEditor.removed) {
+            activeEditor.setContent(textarea.value || "");
+            syncTextareaFromEditor();
+        }
+        else {
+            syncFragmentFromTextarea();
+        }
         editor?.focus?.();
     };
     visualTab.addEventListener("click", () => {
@@ -777,6 +1124,20 @@ export async function createClassicEditor(config) {
     codeTab.addEventListener("click", () => {
         void switchMode("code");
     });
+    window.addEventListener("keydown", handleCodeSearchShortcut, true);
+    document.addEventListener("keydown", handleCodeSearchShortcut, true);
+    textarea.addEventListener("keydown", handleCodeSearchShortcut, true);
+    document.addEventListener("click", (event) => {
+        if (!isCodeSurfaceActive() || !editor || editor.removed) {
+            return;
+        }
+        if (!isSearchReplaceTrigger(event.target)) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        openCodeSearchDialog(editor);
+    }, true);
     document.addEventListener("vietwork:i18n-applied", (event) => {
         const nextI18n = readEditorI18nDetail(event);
         void applyI18n(nextI18n);

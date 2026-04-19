@@ -171,6 +171,11 @@
     @apply grid gap-0;
   }
 
+  body.cms-app .wp-editor-wrap.html-active .wp-editor-container,
+  body.cms-app .classic-editor-shell-wrap.html-active .classic-editor-shell-container {
+    @apply block w-full;
+  }
+
   body.cms-app .classic-editor-toolbar-host {
     @apply border-b border-[#e5e8ee] bg-[#f5f7fc];
   }
@@ -217,6 +222,12 @@
   body.cms-app .wp-editor-area,
   body.cms-app .classic-editor-panel textarea {
     @apply min-h-[520px] w-full resize-y rounded-none border-0;
+  }
+
+  body.cms-app .wp-editor-wrap.html-active .wp-editor-area,
+  body.cms-app .classic-editor-shell-wrap.html-active .classic-editor-area,
+  body.cms-app .classic-editor-shell-wrap.html-active .classic-editor-panel textarea {
+    @apply block w-full;
   }
 
   body.cms-app .classic-editor-area:focus,

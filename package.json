@@ -1,6 +1,6 @@
 {
   "name": "classic-editor-shell",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects",
   "type": "module",
   "main": "./dist/index.js",
