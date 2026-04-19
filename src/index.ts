@@ -5,12 +5,19 @@ export type ClassicEditorLabels = {
   source?: string;
 };
 
+export type EditorStyleProfileCss = {
+  self?: string;
+  base?: string;
+  extend?: string;
+};
+
 export type EditorStyleProfile = {
   contentCssUrls?: string[];
   inlineCss?: string;
   bodyClass?: string;
   blockFormats?: string;
   contentStyle?: string;
+  css?: EditorStyleProfileCss;
 };
 
 export type ClassicEditorConfig = {
@@ -121,6 +128,11 @@ const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
   contentCssUrls: [],
   inlineCss: "",
   contentStyle: "",
+  css: {
+    self: "",
+    base: "",
+    extend: "",
+  },
 };
 
 const LEGACY_EDITOR_UI_TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -263,7 +275,7 @@ function defaultContentCssUrls(assetBaseUrl: string): string[] {
     `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
     `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
     `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
-    `${assetBaseUrl}/classic-editor-content.css`,
+    "/styles.css",
   ];
 }
 
@@ -306,6 +318,11 @@ function mergeProfiles(base: EditorStyleProfile, override?: EditorStyleProfile |
     contentCssUrls: override.contentCssUrls ? [...override.contentCssUrls] : base.contentCssUrls,
     inlineCss: override.inlineCss ?? base.inlineCss,
     contentStyle: override.contentStyle ?? base.contentStyle,
+    css: {
+      self: override.css?.self ?? base.css?.self,
+      base: override.css?.base ?? base.css?.base,
+      extend: override.css?.extend ?? base.css?.extend,
+    },
   };
 }
 
@@ -341,8 +358,24 @@ async function loadStyleProfile(profileUrl: string): Promise<EditorStyleProfile>
   if (typeof (profile as Record<string, unknown>).blockFormats === "string") {
     next.blockFormats = (profile as Record<string, unknown>).blockFormats as string;
   }
+  if (typeof (profile as Record<string, unknown>).css === "object" && (profile as Record<string, unknown>).css !== null) {
+    const css = (profile as Record<string, unknown>).css as Record<string, unknown>;
+    next.css = {
+      self: typeof css.self === "string" ? css.self : "",
+      base: typeof css.base === "string" ? css.base : "",
+      extend: typeof css.extend === "string" ? css.extend : "",
+    };
+  }
 
   return next;
+}
+
+function resolveEditorBodyClass(profile: EditorStyleProfile): string {
+  return String(profile.bodyClass || DEFAULT_EDITOR_STYLE_PROFILE.bodyClass)
+    .split(/\s+/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 function ensureLegacyWpGlobals(win: WindowWithEditor): void {
@@ -673,9 +706,16 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   const contentCssUrls = (resolvedProfile.contentCssUrls || [])
     .filter((url): url is string => typeof url === "string" && url.trim().length > 0)
     .map((url) => `${normalizeCssUrl(url)}?v=${LEGACY_EDITOR_VERSION}`);
-  const contentStyle = [resolvedProfile.contentStyle, resolvedProfile.inlineCss]
+  const contentStyle = [
+    resolvedProfile.css?.self,
+    resolvedProfile.css?.base,
+    resolvedProfile.css?.extend,
+    resolvedProfile.contentStyle,
+    resolvedProfile.inlineCss,
+  ]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join("\n\n");
+  const editorBodyClass = resolveEditorBodyClass(resolvedProfile);
 
   const tinymce = await waitForLegacyTinyMce(assetBaseUrl);
   await loadLegacyPluginScripts(tinymce, assetBaseUrl);
@@ -719,7 +759,7 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     fontsize_formats: "8pt 10pt 12pt 14pt 18pt 24pt 36pt",
     content_css: contentCssUrls,
     ...(contentStyle ? { content_style: contentStyle } : {}),
-    body_class: resolvedProfile.bodyClass || DEFAULT_EDITOR_STYLE_PROFILE.bodyClass,
+    body_class: editorBodyClass,
     wordpress_adv_hidden: false,
     table_toolbar: false,
     table_responsive_width: true,

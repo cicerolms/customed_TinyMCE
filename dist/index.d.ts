@@ -4,12 +4,18 @@ export type ClassicEditorLabels = {
     code?: string;
     source?: string;
 };
+export type EditorStyleProfileCss = {
+    self?: string;
+    base?: string;
+    extend?: string;
+};
 export type EditorStyleProfile = {
     contentCssUrls?: string[];
     inlineCss?: string;
     bodyClass?: string;
     blockFormats?: string;
     contentStyle?: string;
+    css?: EditorStyleProfileCss;
 };
 export type ClassicEditorConfig = {
     target: HTMLElement;

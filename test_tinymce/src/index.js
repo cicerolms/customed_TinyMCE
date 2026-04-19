@@ -5,8 +5,6 @@ const CSS_HEADERS = { "content-type": "text/css; charset=utf-8" };
 
 const DEFAULT_SHARED_RAW_BASE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main";
 const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js";
-const DEFAULT_EDITOR_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-style.css";
-const DEFAULT_EDITOR_CONTENT_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-content.css";
 
 const EDITOR_MEDIA_LIBRARY = [
   {
@@ -62,6 +60,44 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+async function loadEditorStyleProfile(env, request) {
+  const profileResponse = await env.ASSETS.fetch(new Request(new URL("/editor-style-profile.json", request.url).toString(), {
+    method: "GET",
+  }));
+  if (!profileResponse.ok) {
+    return {};
+  }
+
+  const profile = await profileResponse.json().catch(() => ({}));
+  return profile && typeof profile === "object" ? profile : {};
+}
+
+function resolveContentBodyClass(profile = {}) {
+  return String(profile.bodyClass || "cms-editor-content")
+    .split(/\s+/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function resolveSharedBaseCss(profile = {}) {
+  return [profile.css?.base]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n\n");
+}
+
+function resolveExtendedCss(profile = {}) {
+  return [profile.css?.extend, profile.contentStyle, profile.inlineCss]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n\n");
+}
+
+function resolveProfileCss(profile = {}) {
+  return [resolveSharedBaseCss(profile), resolveExtendedCss(profile)]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n\n");
 }
 
 function ensureD1Binding(env) {
@@ -194,32 +230,6 @@ async function fetchSharedRawPath(env, pathname) {
       "content-type": mimeTypeForPath(pathname),
       "cache-control": "public, max-age=300",
     },
-  });
-}
-
-async function fetchSharedEditorStyle(env) {
-  const response = await fetchSharedAsset(env, "CICEROLMS_EDITOR_STYLE_URL", DEFAULT_EDITOR_STYLE_URL);
-  if (!response || !response.ok) {
-    const status = response?.status || 500;
-    return jsonResponse({ ok: false, error: `failed-editor-style-fetch:${status}` }, status);
-  }
-  const code = await response.text();
-  return new Response(code, {
-    status: 200,
-    headers: CSS_HEADERS,
-  });
-}
-
-async function fetchSharedEditorContentStyle(env) {
-  const response = await fetchSharedAsset(env, "CICEROLMS_EDITOR_CONTENT_STYLE_URL", DEFAULT_EDITOR_CONTENT_STYLE_URL);
-  if (!response || !response.ok) {
-    const status = response?.status || 500;
-    return jsonResponse({ ok: false, error: `failed-editor-content-style-fetch:${status}` }, status);
-  }
-  const code = await response.text();
-  return new Response(code, {
-    status: 200,
-    headers: CSS_HEADERS,
   });
 }
 
@@ -385,10 +395,10 @@ function pageShell({ title = "", content = "" } = {}) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TinyMCE Save Test</title>
-    <link rel="stylesheet" href="/editor-style.css" />
+    <link rel="stylesheet" href="/styles.css" />
     <script defer src="https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js"></script>
   </head>
-  <body>
+  <body class="cms-app">
     <main class="page-shell">
       <section class="editor-card">
         <h1>TinyMCE Editor</h1>
@@ -436,10 +446,10 @@ function cmsPageShell({ title = "", content = "" } = {}) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CMS TinyMCE Editor</title>
-    <link rel="stylesheet" href="/editor-style.css" />
+    <link rel="stylesheet" href="/styles.css" />
     <script defer src="https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js"></script>
   </head>
-  <body>
+  <body class="cms-app">
     <main class="cms-root">
       <header class="cms-topbar">
         <a class="brand" href="/">CMS Suite</a>
@@ -492,6 +502,51 @@ function cmsPageShell({ title = "", content = "" } = {}) {
     <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
     <script type="module" src="/editor-lib.js"></script>
+  </body>
+</html>`;
+}
+
+function contentViewShell({ title = "", content = "", createdAt = "", contentBodyClass = "cms-editor-content", includeProfileOverride = false } = {}) {
+  const safeTitle = escapeHtml(String(title || ""));
+  const safeCreatedAt = escapeHtml(String(createdAt || ""));
+  const renderedContent = String(content || "");
+  const safeContentBodyClass = escapeHtml(String(contentBodyClass || "cms-editor-content"));
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle || "Content View"}</title>
+    <link rel="stylesheet" href="/styles.css" />
+    ${includeProfileOverride ? '<link rel="stylesheet" href="/editor-style-profile.css" />' : ""}
+  </head>
+  <body class="cms-app">
+    <main class="cms-root">
+      <header class="cms-topbar">
+        <a class="brand" href="/edit">CMS Suite</a>
+        <p class="route-path">Content / View</p>
+      </header>
+
+      <section class="cms-shell">
+        <article class="editor-card">
+          <div class="editor-head">
+            <div>
+              <p class="breadcrumb">Saved HTML rendering</p>
+              <h1>${safeTitle || "Untitled"}</h1>
+            </div>
+            <div class="editor-head-meta">
+              <span class="chip">Published Preview</span>
+              ${safeCreatedAt ? `<span class="chip chip-soft">${safeCreatedAt}</span>` : ""}
+            </div>
+          </div>
+
+          <div class="content-view-body ${safeContentBodyClass}">
+            ${renderedContent}
+          </div>
+        </article>
+      </section>
+    </main>
   </body>
 </html>`;
 }
@@ -558,6 +613,24 @@ export default {
         }));
       }
 
+      if (pathname === "/view" && request.method === "GET") {
+        const idParam = url.searchParams.get("id");
+        const row = idParam
+          ? await fetchPostById(env, Number(idParam))
+          : await fetchLatestPost(env);
+        if (!row) {
+          return htmlResponse("Not found", 404);
+        }
+        const styleProfile = await loadEditorStyleProfile(env, request);
+        return htmlResponse(contentViewShell({
+          title: row.title || "",
+          content: row.content || "",
+          createdAt: row.created_at || "",
+          contentBodyClass: resolveContentBodyClass(styleProfile),
+          includeProfileOverride: Boolean(resolveProfileCss(styleProfile)),
+        }));
+      }
+
       if (pathname === "/cms/editor/media-picker-modal" && request.method === "GET") {
         return htmlResponse(renderMediaPickerModal(request));
       }
@@ -601,12 +674,20 @@ export default {
         return fetchSharedEditorLib(env);
       }
 
-      if (pathname === "/editor-style.css" && request.method === "GET") {
-        return fetchSharedEditorStyle(env);
+      if (pathname === "/styles.css" && request.method === "GET") {
+        return env.ASSETS.fetch(request);
       }
 
-      if (pathname === "/editor-content.css" && request.method === "GET") {
-        return fetchSharedEditorContentStyle(env);
+      if ((pathname === "/editor-style.css" || pathname === "/editor-content.css") && request.method === "GET") {
+        return env.ASSETS.fetch(new Request(new URL("/styles.css", request.url).toString(), request));
+      }
+
+      if (pathname === "/editor-style-profile.css" && request.method === "GET") {
+        const styleProfile = await loadEditorStyleProfile(env, request);
+        return new Response(resolveProfileCss(styleProfile), {
+          status: 200,
+          headers: CSS_HEADERS,
+        });
       }
 
       if (pathname.startsWith("/assets/") && request.method === "GET") {

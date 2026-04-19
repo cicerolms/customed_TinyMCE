@@ -3,11 +3,18 @@
 This is a dedicated Cloudflare Worker test site that consumes the shared editor bundle from `cicerolms/customed_TinyMCE`
 for an editable page and persists submitted content to D1.
 
+It also demonstrates the consumer pattern for shared styling:
+
+- compile worker-local `public/styles.css` from the shared Tailwind asset
+- use that same `styles.css` for public rendering and TinyMCE content CSS
+- keep Vietwork-specific overrides in `editor-style-profile.json`
+
 ## Routes
 
 - `GET /edit` — render editor screen using shared TinyMCE package
 - `POST /save` — persist editor HTML into D1
 - `GET /confirm` — read latest saved content from D1 as JSON
+- `GET /view` — render saved HTML with the same built stylesheet used by TinyMCE
 - `GET /assets/*` — serve test site assets
 
 ## Local quick start
@@ -29,6 +36,12 @@ for an editable page and persists submitted content to D1.
 6. Open:
   - `http://127.0.0.1:8787/edit`
 
+## Tailwind build
+
+- `npm run build:styles` in `test_tinymce` compiles `public/styles.css`
+- the build input is the shared asset `../assets/tailwind.css`
+- `wrangler deploy` runs that build automatically through `wrangler.toml`
+
 ## Guard
 
 - `npm run guard` in `test_tinymce` starts the worker, writes a Playwright screenshot, and hits `/confirm`.
@@ -36,5 +49,8 @@ for an editable page and persists submitted content to D1.
 
 ## Style profile
 
-- `editor-style-profile.json` mirrors the Vietwork style overrides for H2~H5 and yellow underline.
-- The profile is designed to be replaced per host by editing JSON, so the same shared editor package can be reused with different visual standards.
+- `editor-style-profile.json` now uses raw CSS buckets:
+  - `css.self`: editor-only CSS
+  - `css.base`: shared bare CSS
+  - `css.extend`: site-specific override CSS
+- In the current prod profile, `base` is intentionally minimal and `extend` carries the Vietwork H1~H5 and yellow underline styling.

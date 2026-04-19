@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:styles": "../node_modules/.bin/tailwindcss -c ../tailwind.config.cjs -i ../assets/tailwind.css -o ./public/styles.css --minify",
     "dev": "wrangler dev",
     "guard": "bash ./scripts/guard.sh",
     "deploy": "wrangler deploy"
