@@ -1,0 +1,316 @@
+@charset "UTF-8";
+/* CSS Document */
+
+.box-frame-orange {
+margin: 2em auto;
+padding:1em 2em 2em;/*内側余白*/
+background-color: #FEF6F0; /* 背景色 */
+border-radius:10px;
+box-shadow: 0px 1px 3px rgba(0,0,0,0.1);/*ボックス影*/
+}
+
+.box-frame-orange .box-frame-orange-title {
+color: #DE562C; /* タイトル文字色 */
+font-size: 18px;/*タイトル文字の大きさ*/
+font-weight: bold;
+}
+
+.box-frame-orange .box-frame-orange-title:before {
+font-family: "Font Awesome 5 Free";
+content: "\f06a";
+font-size: 18px;/*アイコンの大きさ*/
+margin: 0 3px 0 0;
+font-weight: bold;
+}
+
+
+
+.box-frame-dot {
+    padding: 1em 1.5em;
+    margin: 2em 0;
+    background-color:#fff;/*背景色*/
+    border: dashed 2px #773d50;/*線*/
+    color:#000000;/*文字色*/
+}
+.box-frame-dot p {
+    margin: 0; 
+    padding: 0;
+}
+
+.box-frame-double {
+ position: relative;
+ margin: 2em auto;
+ padding: 1.2em;
+ width: 100%;
+ color: #191919; /* 文字色 */
+ background-color: #fff;
+ border: 4px double #E8800B; /* 枠線の太さ・色 */
+ box-shadow: 2px 2px 2px #ccc;/* 影の色 */
+}
+
+
+.box-frame-double-title{
+ position: absolute;
+ padding: 0 .5em;
+ left: 20px;
+ top:-30px;
+ font-weight: bold;
+ background-color:  #fff; /* タイトル背景色 */
+ color: #E8800B; /* タイトル文字色 */
+}
+
+.box_orange{
+    display: block;
+    border: 3px solid #de562c;
+    padding: 30px;
+    margin: 0 auto 30px
+}
+.box_orange_ttl{
+    width: 100%;
+    margin: -46px -30px 30px;
+    background-color: #de562c;
+    padding: 10px 30px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #fff;
+   margin-bottom: 0;
+   display: block
+}
+
+
+
+
+
+.box_green{
+    display: block;
+    border: 3px solid #5cde2c;
+    padding: 30px;
+    margin: 0 auto 30px
+}
+.box_green_ttl{
+    width: 100%;
+    margin: -46px -30px 30px;
+    background-color: #5cde2c;
+    padding: 10px 30px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #fff;
+   margin-bottom: 0;
+   display: block
+}
+
+
+
+
+
+.box-blue {
+    margin: 30px auto;
+    padding: 30px; 
+    border-radius: 10px;
+    border: 2px solid #005293;
+}
+.box-blue p{
+margin-bottom:0
+}
+.box-blue-title {
+    color: #005293; 
+    font-size: 18px; 
+    font-weight: bold;
+}
+.box-blue-title:before {
+    content: "";
+    background: url("https://www.vietwork.jp/wp-content/themes/HRnavi/images/icon_question.png") left top / contain no-repeat;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin: 0 8px -3px 0;
+}
+
+
+
+
+.box_frame_orange{
+    background-color: #FEF6F0;
+    padding: 30px;
+}
+
+.box_frame_orange .box_frame_orange_ttl{
+   font-size: 20px;
+    font-weight: bold;
+    color: #DE562C;
+}
+
+
+
+div.listdot_orange2 p {
+    padding-left: 20px;
+    position: relative;
+}
+div.listdot_orange2 p:before {
+    position: absolute;
+    content: "";
+    background-color: #DE562C;
+    width: 10px;
+    height: 10px;
+    font-weight: bold;
+    display: inline-block;
+    border: none;
+    border-radius: 10px;
+    top: 5px;
+    left: 0;
+}
+
+
+div.listdot_orange p {
+    padding-left: 20px;
+    position: relative;
+}
+div.listdot_orange p:before {
+    position: absolute;
+    content: "";
+    background-color: #ffbe32;
+    width: 10px;
+    height: 10px;
+    font-weight: bold;
+    display: inline-block;
+    border: none;
+    border-radius: 10px;
+    top: 5px;
+    left: 0;
+}
+
+
+div.listnumber{
+    counter-reset: section;
+}
+div.listnumber p {
+    padding-left: 30px;
+    position: relative;
+}
+div.listnumber p:before{
+    position: absolute;
+    background-color: #ffbe32;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    border-radius: 20px;
+    counter-increment: section;
+    content: counter(section);
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    width: 25px;
+    height: 25px;
+    top: 0;
+    left: 0;
+}
+
+
+.linebold_yellow {
+    font-weight: 700;
+    text-decoration: none;
+    background-image: linear-gradient(#ffffbc,#ffffbc);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 100% 13px;
+    padding-bottom: 1px;
+}
+
+ h2, h3,h4, h5, h6 {
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    line-height: 1.5;
+    clear: both;
+}
+h2 {
+    font-size: 35px;
+    text-align: center;
+    position: relative;
+    padding-top: 30px;
+    margin-bottom: 30px;
+    font-weight: 900;
+}
+h2:before {
+    position: absolute;
+    content: "";
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: #DF3E0D transparent transparent transparent;
+    border-width: 20px 11px 0 11px;
+    margin: 0 auto;
+    left: 0;
+    right: 0;
+    top: 0;
+}
+h3 {
+    font-size: 30px;
+    font-weight: 900;
+    position: relative;
+    padding-bottom: 8px;
+    margin-bottom: 30px;
+}
+h3:after {
+    position: absolute;
+    content: "";
+    width: 60px;
+    height: 5px;
+    background-image: linear-gradient(-90deg, #DF3E0D 0%, #E97938 100%);
+    left: 0;
+    margin: 0 auto;
+    bottom: 0;
+}
+h4 {
+    font-size: 24px;
+    padding: 12px 0 10px;
+    border-top: 1px solid #DF3E0D;
+    border-bottom: 1px solid #DF3E0D;
+    margin-bottom: 30px;
+}
+
+h4::first-letter {
+    color: #DF3E0D;
+}
+h5 {
+    font-size: 22px;
+    border-left: 8px solid #DF3E0D;
+    padding-left: 10px;
+    margin-bottom: 30px
+}
+ul, ol {
+    margin-bottom: 30px;
+}
+ ul li {
+    padding-left: 15px;
+    position: relative;
+    margin-bottom: 10px;
+    list-style: none;
+}
+ul li:before {
+    position: absolute;
+    content: "";
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent transparent transparent #DF3E0D;
+    border-width: 5px 0 5px 8px;
+    left: 0;
+    top: 6px;
+}
+ol li {
+    list-style: inside decimal;
+    margin-bottom: 10px;
+}
+ ol li::marker {
+    font-weight: bold
+}
+p{
+    clear: both;
+}
+a {
+    color: #DE562C;
+}
+
+
+

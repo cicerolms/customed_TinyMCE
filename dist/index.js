@@ -1,68 +1,411 @@
-const LEGACY_PRESETS = [
-    { key: 'vecb-1', label: 'S', title: 'box-frame-orange', insertHtml: (selectedHtml) => `<div class="box-frame-orange">${selectedHtml}</div>` },
-    { key: 'vecb-2', label: 'ST', title: 'box-frame-orange-title', insertHtml: (selectedHtml) => `<p class="box-frame-orange-title">${selectedHtml}</p>` },
-    { key: 'vecb-3', label: 'D', title: 'box-frame-dot', insertHtml: (selectedHtml) => `<div class="box-frame-dot"><p>${selectedHtml}</p></div>` },
-    { key: 'vecb-4', label: 'DD', title: 'box-frame-double', insertHtml: (selectedHtml) => `<div class="box-frame-double">${selectedHtml}</div>` },
-    { key: 'vecb-5', label: 'DT', title: 'box-frame-double-title', insertHtml: (selectedHtml) => `<p class="box-frame-double-title">${selectedHtml}</p>` },
-    { key: 'vecb-6', label: 'O', title: 'box_orange', insertHtml: (selectedHtml) => `<div class="box_orange">${selectedHtml}</div>` },
-    { key: 'vecb-7', label: 'OT', title: 'box_orange_ttl', insertHtml: (selectedHtml) => `<span class="box_orange_ttl">${selectedHtml}</span>` },
-    { key: 'vecb-8', label: 'G', title: 'box_green', insertHtml: (selectedHtml) => `<div class="box_green">${selectedHtml}</div>` },
-    { key: 'vecb-9', label: 'GT', title: 'box_green_ttl', insertHtml: (selectedHtml) => `<span class="box_green_ttl">${selectedHtml}</span>` },
-    { key: 'vecb-10', label: 'B', title: 'box-blue', insertHtml: (selectedHtml) => `<div class="box-blue">${selectedHtml}</div>` },
-    { key: 'vecb-11', label: 'BT', title: 'box-blue-title', insertHtml: (selectedHtml) => `<p class="box-blue-title">${selectedHtml}</p>` },
-    { key: 'vecb-12', label: 'FO', title: 'box_frame_orange', insertHtml: (selectedHtml) => `<div class="box_frame_orange">${selectedHtml}</div>` },
-    { key: 'vecb-13', label: 'FT', title: 'box_frame_orange_ttl', insertHtml: (selectedHtml) => `<span class="box_frame_orange_ttl">${selectedHtml}</span>` },
-    { key: 'vecb-14', label: 'L1', title: 'listdot_orange2', insertHtml: (selectedHtml) => `<div class="listdot_orange2">${selectedHtml}</div>` },
-    { key: 'vecb-15', label: 'L2', title: 'listdot_orange', insertHtml: (selectedHtml) => `<div class="listdot_orange">${selectedHtml}</div>` },
-    { key: 'vecb-16', label: 'N', title: 'listnumber', insertHtml: (selectedHtml) => `<div class="listnumber">${selectedHtml}</div>` },
-    { key: 'vecb-17', label: 'Y', title: 'linebold_yellow', insertHtml: (selectedHtml) => `<span class="linebold_yellow">${selectedHtml}</span>` },
-];
+const DEFAULT_ASSET_BASE_URL = "/assets";
+const LEGACY_EDITOR_VERSION = "20260411-cms-legacy-wp-editor-v1";
+const LEGACY_TOOLBAR_1 = "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,vietworklinkcard,forecolor,table,vietworkfullscreen";
+const LEGACY_VECB_PLUGIN_NAMES = Array.from({ length: 18 }, (_, index) => `vecb_button${index + 1}`);
+const LEGACY_TOOLBAR_2 = LEGACY_VECB_PLUGIN_NAMES.join(",");
+const LEGACY_PLUGINS = [
+    "charmap",
+    "colorpicker",
+    "hr",
+    "lists",
+    "link",
+    "paste",
+    "tabfocus",
+    "textcolor",
+    "wordpress",
+    "advlist",
+    "anchor",
+    "code",
+    "fullscreen",
+    "insertdatetime",
+    "media",
+    "nonbreaking",
+    "print",
+    "searchreplace",
+    "table",
+    "visualblocks",
+    "visualchars",
+    "wptadv",
+    ...LEGACY_VECB_PLUGIN_NAMES,
+].join(",");
+const DEFAULT_EDITOR_STYLE_PROFILE = {
+    bodyClass: "cms-editor-content",
+    blockFormats: "Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre",
+    contentCssUrls: [],
+    inlineCss: "",
+    contentStyle: "",
+};
+const LEGACY_EDITOR_UI_TRANSLATIONS = {
+    ja: {
+        "New document": "新規ドキュメント",
+        Print: "印刷",
+        Undo: "元に戻す",
+        Redo: "やり直す",
+        Cut: "切り取り",
+        Copy: "コピー",
+        Paste: "貼り付け",
+        "Paste as text": "テキストとして貼り付け",
+        "Select all": "すべて選択",
+        "Find and replace": "検索と置換",
+        "Source code": "ソースコード",
+        "Visual aids": "表示補助",
+        "Show invisible characters": "不可視文字を表示",
+        "Show blocks": "ブロックを表示",
+        Fullscreen: "全画面",
+        "Insert/edit link": "リンクの挿入/編集",
+        "Insert/edit media": "メディア",
+        Table: "テーブル",
+        "Special character": "特殊文字",
+        "Horizontal line": "横ライン",
+        "Nonbreaking space": "改行なしスペース",
+        Anchor: "アンカー",
+        "Date/time": "日付/時間",
+        "Insert More tag": "「続きを読む」タグを挿入",
+        "Page break": "改ページ",
+        Bold: "太字",
+        Italic: "斜体",
+        Underline: "下線",
+        Strikethrough: "取り消し線",
+        Superscript: "上付き",
+        Subscript: "下付き",
+        Formats: "書式",
+        Align: "配置",
+        "Clear formatting": "書式をクリア",
+        "Reset table size": "テーブルサイズをリセット",
+        "Remove table styling": "テーブル装飾を削除",
+        "Table properties": "テーブルのプロパティ",
+        "Delete table": "テーブルを削除",
+        Row: "行",
+        Column: "列",
+        Cell: "セル",
+        Insert: "挿入",
+        Format: "フォーマット",
+        Tools: "ツール",
+        View: "表示",
+        Edit: "編集",
+        File: "ファイル",
+    },
+    vi: {
+        "New document": "Tài liệu mới",
+        Print: "In",
+        Undo: "Hoàn tác",
+        Redo: "Làm lại",
+        Cut: "Cắt",
+        Copy: "Sao chép",
+        Paste: "Dán",
+        "Paste as text": "Dán dạng văn bản",
+        "Select all": "Chọn tất cả",
+        "Find and replace": "Tìm và thay thế",
+        "Source code": "Mã nguồn",
+        "Visual aids": "Hỗ trợ hiển thị",
+        "Show invisible characters": "Hiện ký tự ẩn",
+        "Show blocks": "Hiện khối",
+        Fullscreen: "Toàn màn hình",
+        "Insert/edit link": "Chèn/sửa liên kết",
+        "Insert/edit media": "Media",
+        Table: "Bảng",
+        "Special character": "Ký tự đặc biệt",
+        "Horizontal line": "Đường ngang",
+        "Nonbreaking space": "Khoảng trắng không ngắt",
+        Anchor: "Neo",
+        "Date/time": "Ngày/giờ",
+        "Insert More tag": "Chèn thẻ More",
+        "Page break": "Ngắt trang",
+        Bold: "Đậm",
+        Italic: "Nghiêng",
+        Underline: "Gạch chân",
+        Strikethrough: "Gạch ngang",
+        Superscript: "Chỉ số trên",
+        Subscript: "Chỉ số dưới",
+        Formats: "Định dạng",
+        Align: "Căn chỉnh",
+        "Clear formatting": "Xóa định dạng",
+        "Reset table size": "Đặt lại kích thước bảng",
+        "Remove table styling": "Xóa kiểu bảng",
+        "Table properties": "Thuộc tính bảng",
+        "Delete table": "Xóa bảng",
+        Row: "Hàng",
+        Column: "Cột",
+        Cell: "Ô",
+        Insert: "Chèn",
+        Format: "Định dạng",
+        Tools: "Công cụ",
+        View: "Xem",
+        Edit: "Chỉnh sửa",
+        File: "Tệp",
+    },
+};
+const tinyMceLoaderCache = new Map();
+const legacyPluginLoaderCache = new Map();
+const registeredEditorI18n = new Set();
 function resolveNode(node) {
     if (!node)
         return null;
-    if (typeof node === 'string') {
-        if (typeof document === 'undefined')
-            return null;
-        return document.querySelector(node);
+    if (typeof node === "string") {
+        return typeof document === "undefined" ? null : document.querySelector(node);
     }
     return node;
 }
-function toTextArea(node) {
-    const element = resolveNode(node);
-    return element instanceof HTMLTextAreaElement ? element : null;
-}
 function getEndpoint(url, fallback) {
-    return String(url || '').trim() || fallback;
+    return String(url || "").trim() || fallback;
 }
-function toHtmlFromMedia(dataset) {
-    const url = String(dataset.mediaUrl || '').trim();
+function translate(key, fallback) {
+    const api = window.__i18n;
+    return api?.t?.(key, fallback) || fallback;
+}
+function normalizeEditorLang(input) {
+    const value = String(input || "").toLowerCase();
+    if (value === "jp")
+        return "ja";
+    if (value.startsWith("ja"))
+        return "ja";
+    if (value.startsWith("vi"))
+        return "vi";
+    if (value.startsWith("en"))
+        return "en";
+    return "ja";
+}
+function label(labels, key, fallback) {
+    return labels?.[key] || fallback;
+}
+function defaultContentCssUrls(assetBaseUrl) {
+    return [
+        `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/lightgray/content.min.css`,
+        `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce/skins/wordpress/wp-content.css`,
+        `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons/css/editor-style.css`,
+        `${assetBaseUrl}/classic-editor-content.css`,
+    ];
+}
+function legacyPluginSources(assetBaseUrl) {
+    const tinyMceBase = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
+    const tadvBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/tinymce-advanced`;
+    const vecbBase = `${assetBaseUrl}/vendor/wp-legacy/wp-content/plugins/visual-editor-custom-buttons`;
+    return {
+        advlist: `${tadvBase}/mce/advlist/plugin.min.js`,
+        anchor: `${tadvBase}/mce/anchor/plugin.min.js`,
+        code: `${tadvBase}/mce/code/plugin.min.js`,
+        fullscreen: `${tinyMceBase}/plugins/fullscreen/plugin.min.js`,
+        insertdatetime: `${tadvBase}/mce/insertdatetime/plugin.min.js`,
+        media: `${tinyMceBase}/plugins/media/plugin.min.js`,
+        nonbreaking: `${tadvBase}/mce/nonbreaking/plugin.min.js`,
+        print: `${tadvBase}/mce/print/plugin.min.js`,
+        searchreplace: `${tadvBase}/mce/searchreplace/plugin.min.js`,
+        table: `${tadvBase}/mce/table/plugin.min.js`,
+        visualblocks: `${tadvBase}/mce/visualblocks/plugin.min.js`,
+        visualchars: `${tadvBase}/mce/visualchars/plugin.min.js`,
+        wptadv: `${tadvBase}/mce/wptadv/plugin.min.js`,
+        ...Object.fromEntries(LEGACY_VECB_PLUGIN_NAMES.map((name, index) => [
+            name,
+            `${vecbBase}/js/button-1-${index + 1}.js`,
+        ])),
+    };
+}
+function normalizeCssUrl(url) {
+    return url.trim();
+}
+function mergeProfiles(base, override) {
+    if (!override)
+        return base;
+    return {
+        bodyClass: override.bodyClass ?? base.bodyClass,
+        blockFormats: override.blockFormats ?? base.blockFormats,
+        contentCssUrls: override.contentCssUrls ? [...override.contentCssUrls] : base.contentCssUrls,
+        inlineCss: override.inlineCss ?? base.inlineCss,
+        contentStyle: override.contentStyle ?? base.contentStyle,
+    };
+}
+async function loadStyleProfile(profileUrl) {
+    const response = await fetch(profileUrl, {
+        credentials: "same-origin",
+        cache: "no-store",
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to load editor style profile: ${response.status}`);
+    }
+    const profile = await response.json();
+    if (!profile || typeof profile !== "object") {
+        throw new Error("Invalid editor style profile payload");
+    }
+    const next = {};
+    if (Array.isArray(profile.contentCssUrls)) {
+        next.contentCssUrls = profile.contentCssUrls
+            .map((value) => (typeof value === "string" ? normalizeCssUrl(value) : ""))
+            .filter(Boolean);
+    }
+    if (typeof profile.inlineCss === "string") {
+        next.inlineCss = profile.inlineCss;
+    }
+    if (typeof profile.contentStyle === "string") {
+        next.contentStyle = profile.contentStyle;
+    }
+    if (typeof profile.bodyClass === "string") {
+        next.bodyClass = profile.bodyClass;
+    }
+    if (typeof profile.blockFormats === "string") {
+        next.blockFormats = profile.blockFormats;
+    }
+    return next;
+}
+function ensureLegacyWpGlobals(win) {
+    if (typeof win.getUserSetting !== "function") {
+        win.getUserSetting = (name, fallback = "") => window.localStorage.getItem(`wp-user-setting:${name}`) ?? fallback;
+    }
+    if (typeof win.setUserSetting !== "function") {
+        win.setUserSetting = (name, value) => {
+            window.localStorage.setItem(`wp-user-setting:${name}`, String(value));
+            return value;
+        };
+    }
+    win.wp = win.wp || {};
+    win.wp.editor = win.wp.editor || {};
+}
+async function loadScript(url) {
+    const response = await fetch(`${url}?v=${LEGACY_EDITOR_VERSION}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to load legacy editor asset: ${response.status} ${url}`);
+    }
+    const code = await response.text();
+    window.eval(`${code}\n//# sourceURL=${url}`);
+}
+async function waitForLegacyTinyMce(assetBaseUrl) {
+    const cached = tinyMceLoaderCache.get(assetBaseUrl);
+    if (cached) {
+        return cached;
+    }
+    const promise = (async () => {
+        const win = window;
+        if (win.tinymce)
+            return win.tinymce;
+        ensureLegacyWpGlobals(win);
+        const tinyMceBaseUrl = `${assetBaseUrl}/vendor/wp-legacy/wp-includes/js/tinymce`;
+        await loadScript(`${tinyMceBaseUrl}/wp-tinymce.js`);
+        if (!win.tinymce) {
+            throw new Error("Legacy TinyMCE did not initialize");
+        }
+        win.tinymce.baseURL = tinyMceBaseUrl;
+        win.tinymce.baseURI = new URL(`${tinyMceBaseUrl}/`, window.location.origin).toString();
+        win.tinymce.suffix = ".min";
+        return win.tinymce;
+    })().catch((error) => {
+        tinyMceLoaderCache.delete(assetBaseUrl);
+        throw error;
+    });
+    tinyMceLoaderCache.set(assetBaseUrl, promise);
+    return promise;
+}
+async function loadLegacyPluginScripts(tinymce, assetBaseUrl) {
+    const cached = legacyPluginLoaderCache.get(assetBaseUrl);
+    if (cached) {
+        return cached;
+    }
+    const promise = (async () => {
+        const pluginSources = legacyPluginSources(assetBaseUrl);
+        for (const [name, source] of Object.entries(pluginSources)) {
+            const basePath = source
+                .replace(/\/plugin(?:\.min)?\.js$/, "")
+                .replace(/\/button-\d+-\d+\.js$/, "/");
+            if (tinymce.PluginManager.urls) {
+                tinymce.PluginManager.urls[name] = basePath;
+            }
+            if (tinymce.PluginManager.lookup?.[name]) {
+                continue;
+            }
+            await loadScript(source);
+        }
+    })().catch((error) => {
+        legacyPluginLoaderCache.delete(assetBaseUrl);
+        throw error;
+    });
+    legacyPluginLoaderCache.set(assetBaseUrl, promise);
+    return promise;
+}
+function registerLegacyEditorI18n(tinymce, lang) {
+    const normalized = normalizeEditorLang(lang);
+    if (registeredEditorI18n.has(normalized)) {
+        return normalized;
+    }
+    if (normalized !== "en") {
+        tinymce.addI18n(normalized, LEGACY_EDITOR_UI_TRANSLATIONS[normalized] || {});
+    }
+    registeredEditorI18n.add(normalized);
+    return normalized;
+}
+function localizeLegacyMenubar(editor) {
+    const labels = [
+        translate("editor.menu.file", "ファイル"),
+        translate("editor.menu.edit", "編集"),
+        translate("editor.menu.view", "表示"),
+        translate("editor.menu.insert", "挿入"),
+        translate("editor.menu.format", "フォーマット"),
+        translate("editor.menu.tools", "ツール"),
+        translate("editor.menu.table", "テーブル"),
+    ];
+    const nodes = Array.from(editor.getContainer().querySelectorAll(".mce-menubar .mce-menubtn span"));
+    nodes.forEach((node, index) => {
+        if (!(node instanceof HTMLElement))
+            return;
+        if (!labels[index])
+            return;
+        node.textContent = labels[index];
+    });
+}
+function selectionUrl(editor) {
+    const selected = String(editor?.selection?.getContent?.({ format: "text" }) || "").trim();
+    const match = selected.match(/((https?|file|ftp|data|ogg):\/\/[^ "<,]+)/i);
+    return match ? match[1] : "";
+}
+function openLinkCardDialog(editor, assetBaseUrl) {
+    const initialUrl = selectionUrl(editor);
+    const promptValue = window.prompt("Linkcard URL", initialUrl);
+    if (!promptValue)
+        return;
+    editor.focus();
+    editor.selection.setContent(`<p>[blogcard url="${editor.dom.encode(String(promptValue).trim())}"]</p>`);
+    editor.windowManager?.close?.();
+    void assetBaseUrl;
+}
+function toggleEditorFullscreen(root, editor) {
+    const isActive = root.classList.toggle("is-fullscreen");
+    document.body.classList.toggle("editor-fullscreen-active", isActive);
+    editor.fire("ResizeEditor");
+}
+function insertAtCaret(textarea, value) {
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    textarea.setRangeText(value, start, end, "end");
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function buildInsertHtml(dataset) {
+    const url = String(dataset.mediaUrl || "").trim();
     if (!url)
         return "";
     const title = String(dataset.mediaTitle || dataset.mediaFilename || "media").trim();
     const alt = String(dataset.mediaAlt || title).trim();
-    const mimeType = String(dataset.mediaMime || '').trim();
+    const mimeType = String(dataset.mediaMime || "").trim();
     const escapedUrl = url.replace(/"/g, "&quot;");
     const escapedTitle = title.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char] || char));
-    const escapedAlt = alt.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] || char));
+    const escapedAlt = alt.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char] || char));
     if (mimeType.startsWith("image/")) {
-        return `<img src="${escapedUrl}" alt="${escapedAlt}" />`;
+        return `<img src="${escapedUrl}" alt="${escapedAlt}">`;
     }
     return `<a href="${escapedUrl}">${escapedTitle}</a>`;
 }
 function getPayload(form) {
     const payload = {};
-    const controls = Array.from(form.querySelectorAll("input, textarea, select, button"));
-    for (const control of controls) {
+    const controls = Array.from(form.querySelectorAll("input, textarea, select"));
+    controls.forEach((control) => {
         if (!(control instanceof HTMLInputElement) && !(control instanceof HTMLTextAreaElement) && !(control instanceof HTMLSelectElement)) {
-            continue;
+            return;
         }
-        const fieldName = control.name;
-        if (!fieldName || control.disabled)
-            continue;
+        if (!control.name || control.disabled)
+            return;
         if (control instanceof HTMLInputElement && control.type === "file")
-            continue;
-        payload[fieldName] = String(control.value || "");
-    }
+            return;
+        payload[control.name] = String(control.value || "");
+    });
     return payload;
 }
 function pickFirstString(...values) {
@@ -75,7 +418,7 @@ function pickFirstString(...values) {
 }
 async function saveEditorContent(form, statusNode, saveUrl) {
     const payload = getPayload(form);
-    payload.content = pickFirstString(payload.content, payload["content-visual"], payload["content-code"], payload["content-editor-code"], payload["content-editor"]);
+    payload.content = pickFirstString(payload.content, payload["content-visual"], payload["content-code"], payload["content-editor"], payload["content-html"]);
     if (!payload.content) {
         const status = "Save blocked: content is empty.";
         statusNode.textContent = status;
@@ -106,27 +449,19 @@ async function loadLatestPost(confirmUrl, form, statusNode) {
     }
     const post = responseBody.post;
     const titleField = form.querySelector("#post-title");
-    const textArea = form.querySelector("[data-editor-visual], [data-editor-textarea]");
-    const codeTextarea = form.querySelector("[data-editor-code]");
-    const submitField = form.querySelector("[data-editor-submit-field]");
+    const textarea = form.querySelector("[data-editor-textarea], [data-editor-visual], textarea[name='content']");
     if (titleField instanceof HTMLInputElement) {
         titleField.value = post.title || "";
     }
-    if (textArea instanceof HTMLTextAreaElement) {
-        textArea.value = post.content || "";
-    }
-    if (codeTextarea instanceof HTMLTextAreaElement) {
-        codeTextarea.value = post.content || "";
-    }
-    if (submitField instanceof HTMLTextAreaElement) {
-        submitField.value = post.content || "";
+    if (textarea instanceof HTMLTextAreaElement) {
+        textarea.value = post.content || "";
     }
     const status = `Reloaded latest post id=${post.id}`;
     statusNode.textContent = status;
-    return { status };
+    return { status, content: post.content || "" };
 }
 function openMediaModal(backdrop, mediaUrl) {
-    if (!mediaUrl || !backdrop || typeof fetch !== 'function')
+    if (!mediaUrl)
         return;
     fetch(mediaUrl, {
         headers: { "x-requested-with": "fetch" },
@@ -138,9 +473,7 @@ function openMediaModal(backdrop, mediaUrl) {
         backdrop.classList.remove("hidden");
         backdrop.setAttribute("aria-hidden", "false");
         const htmx = window.htmx;
-        if (htmx?.process) {
-            htmx.process(backdrop);
-        }
+        htmx?.process?.(backdrop);
         const searchInput = backdrop.querySelector('input[name="keyword"]');
         if (searchInput instanceof HTMLInputElement) {
             searchInput.focus();
@@ -150,7 +483,7 @@ function openMediaModal(backdrop, mediaUrl) {
 }
 function closeMediaModal(backdrop) {
     backdrop.classList.add("hidden");
-    backdrop.innerHTML = '';
+    backdrop.innerHTML = "";
     backdrop.setAttribute("aria-hidden", "true");
 }
 function bindMediaDelegates(backdrop) {
@@ -162,23 +495,22 @@ function bindMediaDelegates(backdrop) {
             return;
         }
         const insertButton = event.target instanceof Element ? event.target.closest("[data-editor-media-insert]") : null;
-        if (insertButton instanceof HTMLElement && insertButton.dataset) {
+        if (insertButton instanceof HTMLElement) {
             event.preventDefault();
-            const html = toHtmlFromMedia(insertButton.dataset);
+            const html = buildInsertHtml(insertButton.dataset);
             if (html) {
-                window.dispatchEvent(new CustomEvent("test-tinymce:media-insert", {
-                    detail: { html },
-                }));
+                window.dispatchEvent(new CustomEvent("cicerolms:media-insert", { detail: { html } }));
             }
             closeMediaModal(backdrop);
             return;
         }
-        const close = event.target instanceof Element ? event.target.closest(".modal-close,[data-modal-close]") : null;
-        if (close) {
+        const closeButton = event.target instanceof Element ? event.target.closest(".modal-close,[data-modal-close]") : null;
+        if (closeButton) {
+            event.preventDefault();
             closeMediaModal(backdrop);
             return;
         }
-        if (event.target instanceof HTMLElement && event.target.classList.contains("hidden")) {
+        if (event.target instanceof HTMLElement && event.target.classList.contains("modal-backdrop")) {
             closeMediaModal(backdrop);
         }
     });
@@ -188,110 +520,271 @@ function bindMediaDelegates(backdrop) {
         }
     });
 }
+export async function createClassicEditor(config) {
+    const { target, textarea, styleProfile, styleProfileUrl, labels } = config;
+    const assetBaseUrl = getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL);
+    const visualTab = target.querySelector('[data-editor-tab="visual"]');
+    const codeTab = target.querySelector('[data-editor-tab="code"]');
+    const wrap = target.querySelector(".wp-editor-wrap");
+    if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement) || !(wrap instanceof HTMLElement)) {
+        throw new Error("Classic editor target is missing the legacy WP wrapper structure.");
+    }
+    const profileStack = [
+        {
+            ...DEFAULT_EDITOR_STYLE_PROFILE,
+            contentCssUrls: defaultContentCssUrls(assetBaseUrl),
+        },
+    ];
+    if (styleProfileUrl) {
+        try {
+            profileStack.push(await loadStyleProfile(styleProfileUrl));
+        }
+        catch (error) {
+            console.warn("Failed to load editor style profile, using defaults only", error);
+        }
+    }
+    if (styleProfile) {
+        profileStack.push(styleProfile);
+    }
+    const resolvedProfile = profileStack.reduce((current, next) => mergeProfiles(current, next), {});
+    const contentCssUrls = (resolvedProfile.contentCssUrls || [])
+        .filter((url) => typeof url === "string" && url.trim().length > 0)
+        .map((url) => `${normalizeCssUrl(url)}?v=${LEGACY_EDITOR_VERSION}`);
+    const contentStyle = [resolvedProfile.contentStyle, resolvedProfile.inlineCss]
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .join("\n\n");
+    const tinymce = await waitForLegacyTinyMce(assetBaseUrl);
+    await loadLegacyPluginScripts(tinymce, assetBaseUrl);
+    let editorLang = registerLegacyEditorI18n(tinymce, window.__i18n?.lang || document.documentElement.lang || "ja");
+    let editor = null;
+    let mode = "visual";
+    const editorId = textarea.id;
+    const renderMode = () => {
+        wrap.classList.toggle("tmce-active", mode === "visual");
+        wrap.classList.toggle("html-active", mode === "code");
+        visualTab.setAttribute("aria-pressed", String(mode === "visual"));
+        codeTab.setAttribute("aria-pressed", String(mode === "code"));
+    };
+    const getLegacyConfig = () => ({
+        selector: `#${editorId}`,
+        language: editorLang,
+        theme: "modern",
+        skin: "lightgray",
+        menubar: "file edit view insert format tools table",
+        statusbar: true,
+        resize: true,
+        branding: false,
+        browser_spellcheck: true,
+        convert_urls: false,
+        relative_urls: false,
+        remove_script_host: false,
+        document_base_url: `${window.location.origin}/`,
+        height: 520,
+        toolbar1: LEGACY_TOOLBAR_1,
+        toolbar2: LEGACY_TOOLBAR_2,
+        toolbar3: "",
+        toolbar4: "",
+        plugins: LEGACY_PLUGINS,
+        block_formats: resolvedProfile.blockFormats || DEFAULT_EDITOR_STYLE_PROFILE.blockFormats,
+        fontsize_formats: "8pt 10pt 12pt 14pt 18pt 24pt 36pt",
+        content_css: contentCssUrls,
+        ...(contentStyle ? { content_style: contentStyle } : {}),
+        body_class: resolvedProfile.bodyClass || DEFAULT_EDITOR_STYLE_PROFILE.bodyClass,
+        wordpress_adv_hidden: false,
+        table_toolbar: false,
+        table_responsive_width: true,
+        menu: {
+            file: { title: translate("editor.menu.file", "ファイル"), items: "newdocument | print" },
+            edit: { title: translate("editor.menu.edit", "編集"), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
+            view: { title: translate("editor.menu.view", "表示"), items: "code | visualaid visualchars visualblocks | fullscreen" },
+            insert: { title: translate("editor.menu.insert", "挿入"), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | vietworkaddmedia wp_more wp_page" },
+            format: { title: translate("editor.menu.format", "フォーマット"), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
+            tools: { title: translate("editor.menu.tools", "ツール"), items: "code" },
+            table: { title: translate("editor.menu.table", "テーブル"), items: "inserttable tableprops deletetable | row column cell" },
+        },
+        init_instance_callback(instance) {
+            editor = instance;
+            localizeLegacyMenubar(instance);
+        },
+        setup(instance) {
+            instance.addMenuItem("vietworkaddmedia", {
+                text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加")),
+                icon: "media",
+                context: "insert",
+                onclick() {
+                    const trigger = target.querySelector(".insert-media[data-media-modal-open]");
+                    if (trigger instanceof HTMLElement) {
+                        trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+                    }
+                },
+            });
+            instance.addButton("vietworklinkcard", {
+                tooltip: translate("editor.linkCard.button", "Insert Linkcard"),
+                image: `${assetBaseUrl}/vendor/pz-linkcard/mce-button.png`,
+                onclick() {
+                    openLinkCardDialog(instance, assetBaseUrl);
+                },
+            });
+            instance.addButton("vietworkfullscreen", {
+                tooltip: translate("editor.fullscreen.writer", "Distraction-free writing mode"),
+                icon: "fullscreen",
+                onclick() {
+                    toggleEditorFullscreen(target, instance);
+                },
+            });
+            instance.on("focus", () => {
+                window.wpActiveEditor = editorId;
+            });
+            instance.on("init", () => {
+                localizeLegacyMenubar(instance);
+            });
+            instance.on("remove", () => {
+                target.classList.remove("is-fullscreen");
+                document.body.classList.remove("editor-fullscreen-active");
+            });
+        },
+    });
+    const ensureVisualEditor = async () => {
+        if (editor && !editor.removed) {
+            return editor;
+        }
+        const instances = await tinymce.init(getLegacyConfig());
+        editor = instances[0] || tinymce.get(editorId) || null;
+        return editor;
+    };
+    const removeVisualEditor = () => {
+        const activeEditor = tinymce.get(editorId);
+        if (activeEditor) {
+            activeEditor.save();
+            activeEditor.remove();
+        }
+        editor = null;
+    };
+    const refreshEditorLanguage = async (nextLang) => {
+        const normalized = registerLegacyEditorI18n(tinymce, String(nextLang || ""));
+        if (normalized === editorLang) {
+            localizeLegacyMenubar(tinymce.get(editorId) || editor);
+            return;
+        }
+        editorLang = normalized;
+        if (mode !== "visual")
+            return;
+        const activeEditor = tinymce.get(editorId);
+        activeEditor?.save();
+        removeVisualEditor();
+        await ensureVisualEditor();
+    };
+    const switchMode = async (nextMode) => {
+        if (nextMode === mode)
+            return;
+        if (nextMode === "code") {
+            removeVisualEditor();
+            mode = "code";
+            renderMode();
+            textarea.focus();
+            return;
+        }
+        mode = "visual";
+        renderMode();
+        await ensureVisualEditor();
+        editor?.focus?.();
+    };
+    visualTab.addEventListener("click", () => {
+        void switchMode("visual");
+    });
+    codeTab.addEventListener("click", () => {
+        void switchMode("code");
+    });
+    document.addEventListener("vietwork:i18n-applied", (event) => {
+        const nextLang = event instanceof CustomEvent ? event.detail?.lang : "";
+        void refreshEditorLanguage(nextLang);
+    });
+    renderMode();
+    await ensureVisualEditor();
+    return {
+        switchMode,
+        insertHtml(html) {
+            if (!html)
+                return;
+            const activeEditor = tinymce.get(editorId);
+            if (mode === "visual" && activeEditor) {
+                activeEditor.focus();
+                activeEditor.selection.setContent(html);
+                activeEditor.save();
+                return;
+            }
+            insertAtCaret(textarea, html);
+        },
+        setContent(html) {
+            textarea.value = html;
+            const activeEditor = tinymce.get(editorId);
+            if (mode === "visual" && activeEditor) {
+                activeEditor.setContent(html || "");
+                activeEditor.save();
+            }
+        },
+        syncToTextarea() {
+            const activeEditor = tinymce.get(editorId);
+            activeEditor?.save();
+        },
+        async destroy() {
+            removeVisualEditor();
+            target.classList.remove("is-fullscreen");
+            document.body.classList.remove("editor-fullscreen-active");
+        },
+    };
+}
 export async function bootstrapClassicEditor(config = {}) {
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
         return null;
     }
     const target = resolveNode(config.target || "[data-classic-editor]");
-    if (!(target instanceof HTMLElement)) {
-        return null;
-    }
-    const tinyMceGlobal = config.tinyMceGlobal || (typeof window !== 'undefined' ? window.tinymce : null);
-    if (!tinyMceGlobal) {
-        const fallback = document.querySelector("#save-status") || null;
-        if (fallback instanceof HTMLElement) {
-            fallback.textContent = "Editor bootstrap failed: missing TinyMCE global.";
-        }
-        return null;
-    }
-    const textarea = target.querySelector("[data-editor-visual], [data-editor-textarea]");
-    const codeTextarea = target.querySelector("[data-editor-code]");
-    const submitField = target.querySelector("[data-editor-submit-field]");
-    const visualTab = target.querySelector('[data-editor-tab="visual"]');
-    const codeTab = target.querySelector('[data-editor-tab="code"]');
     const formElement = resolveNode(config.form || "#post-editor-form");
-    if (!(textarea instanceof HTMLTextAreaElement)
-        || !(codeTextarea instanceof HTMLTextAreaElement)
-        || !(submitField instanceof HTMLTextAreaElement)
-        || !(formElement instanceof HTMLFormElement)) {
+    const statusTarget = resolveNode(config.statusNode || "#save-status");
+    if (!(target instanceof HTMLElement) || !(formElement instanceof HTMLFormElement) || !(statusTarget instanceof HTMLElement)) {
         return null;
     }
-    const statusNode = resolveNode(config.statusNode || "#save-status");
-    const statusTarget = statusNode instanceof HTMLElement ? statusNode : null;
-    if (!statusTarget) {
+    const textarea = target.querySelector("[data-editor-textarea], [data-editor-visual], textarea[name='content']");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
         return null;
     }
     const editor = await createClassicEditor({
         target,
         textarea,
-        codeTextarea,
-        submitField,
-        tinyMceGlobal,
-        tinymceBaseUrl: getEndpoint(config.tinymceBaseUrl, "https://cdn.jsdelivr.net/npm/tinymce@7.8.0"),
-        tinymceVersion: getEndpoint(config.tinymceVersion, "7.8.0") || "7.8.0",
+        assetBaseUrl: getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL),
         styleProfileUrl: getEndpoint(config.styleProfileUrl, "/editor-style-profile.json"),
         styleProfile: config.styleProfile,
-        labels: {
-            source: "Source",
-            yellowHighlight: "Yellow Highlight",
-            searchPlaceholder: "Search text",
-            searchPrev: "Prev",
-            searchNext: "Next",
-            noResults: "No results",
-            ...config.labels,
-        },
-        mediaInsert: (html) => {
-            window.dispatchEvent(new CustomEvent("test-tinymce:media-insert", {
-                detail: { html },
-            }));
-        },
+        labels: config.labels,
     });
     const state = {
         editor,
         form: formElement,
         target,
         textArea: textarea,
-        codeTextArea: codeTextarea,
-        submitField,
         statusNode: statusTarget,
     };
-    const selectMode = (mode) => editor.switchMode(mode);
-    visualTab?.addEventListener("click", (event) => {
-        event.preventDefault();
-        selectMode("visual");
-    });
-    codeTab?.addEventListener("click", (event) => {
-        event.preventDefault();
-        selectMode("code");
-    });
-    if (visualTab instanceof HTMLElement) {
-        visualTab.setAttribute("aria-pressed", "true");
-    }
-    if (codeTab instanceof HTMLElement) {
-        codeTab.setAttribute("aria-pressed", "false");
-    }
-    selectMode("visual");
     const backdrop = resolveNode(config.backdropId ? `#${config.backdropId}` : "#modal-backdrop");
     if (backdrop instanceof HTMLElement) {
         bindMediaDelegates(backdrop);
     }
     state.form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        state.editor.syncToTextarea();
         await saveEditorContent(state.form, state.statusNode, getEndpoint(config.saveUrl, "/save"));
     });
     resolveNode(config.refreshButton || "#refresh")?.addEventListener("click", () => {
-        textarea.value = "";
-        codeTextarea.value = "";
-        submitField.value = "";
-        statusTarget.textContent = "Editor cleared.";
+        state.editor.setContent("");
+        state.statusNode.textContent = "Editor cleared.";
     });
-    const confirmButton = resolveNode(config.confirmButton || "#confirm-latest");
-    confirmButton?.addEventListener("click", async () => {
-        await loadLatestPost(getEndpoint(config.confirmUrl, "/confirm"), state.form, state.statusNode);
+    resolveNode(config.confirmButton || "#confirm-latest")?.addEventListener("click", async () => {
+        const result = await loadLatestPost(getEndpoint(config.confirmUrl, "/confirm"), state.form, state.statusNode);
+        if (typeof result.content === "string") {
+            state.editor.setContent(result.content);
+        }
     });
-    const previewButton = resolveNode(config.previewButton || "#open-preview");
-    previewButton?.addEventListener("click", () => {
-        const htmlPayload = textarea.value.trim() || codeTextarea.value.trim() || "";
+    resolveNode(config.previewButton || "#open-preview")?.addEventListener("click", () => {
+        state.editor.syncToTextarea();
+        const htmlPayload = state.textArea.value.trim();
         if (!htmlPayload) {
             state.statusNode.textContent = "Preview is empty.";
             return;
@@ -300,25 +793,20 @@ export async function bootstrapClassicEditor(config = {}) {
         window.open(`data:text/html,${encoded}`, "_blank", "noopener");
         state.statusNode.textContent = "Opening preview in a new tab.";
     });
-    window.addEventListener("test-tinymce:media-insert", (event) => {
-        const html = event?.detail?.html;
-        if (!html)
-            return;
-        editor.insertHtml(html);
+    window.addEventListener("cicerolms:media-insert", (event) => {
+        const html = event.detail?.html;
+        if (html) {
+            state.editor.insertHtml(html);
+        }
     });
     return state;
 }
-if (typeof window !== 'undefined' && typeof document !== 'undefined' && !window.__cicerolmsClassicEditorAutoBootDone) {
-    window.__cicerolmsClassicEditorAutoBootDone = true;
+if (typeof window !== "undefined" && typeof document !== "undefined" && !window.__cicerolmsLegacyEditorAutoBootDone) {
+    window.__cicerolmsLegacyEditorAutoBootDone = true;
     const boot = async () => {
         if (!document.querySelector("[data-classic-editor]"))
             return;
-        if (!window.tinymce) {
-            return;
-        }
-        await bootstrapClassicEditor({
-            tinyMceGlobal: window.tinymce,
-        });
+        await bootstrapClassicEditor();
     };
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
@@ -328,407 +816,4 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && !window.
     else {
         void boot();
     }
-}
-const DEFAULT_EDITOR_STYLE_PROFILE = {
-    bodyClass: 'cms-editor-content',
-    blockFormats: 'Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre',
-    contentCssUrls: [],
-    inlineCss: `body.cms-editor-content {\n  box-sizing: border-box;\n  max-width: 100%;\n  margin: 0 auto;\n  padding: 12px 14px;\n  color: #1f2937;\n  font-family: inherit;\n  line-height: 1.6;\n  word-break: break-word;\n  text-align: left;\n}\n\nbody.cms-editor-content .linebold_yellow {\n  font-weight: 700;\n  background-image: linear-gradient(#fff9bf, #fff9bf);\n  background-position: 0% 100%;\n  background-repeat: no-repeat;\n  background-size: 100% 10px;\n}\n\nbody.cms-editor-content .ce-callout-soft {\n  padding: 1rem 1.25rem;\n  border-left: 6px solid #e37b40;\n  background: #fff5ec;\n  border-radius: 8px;\n}\n\nbody.cms-editor-content .ce-frame-dashed {\n  padding: 1rem 1.25rem;\n  border: 2px dashed #d1d5db;\n  border-radius: 10px;\n}\n\nbody.cms-editor-content .ce-frame-accent {\n  padding: 1rem 1.25rem;\n  border: 2px solid #ef7d32;\n  border-radius: 10px;\n  background: linear-gradient(180deg, #fffaf4, #ffffff);\n}\n\nbody.cms-editor-content .ce-label {\n  display: inline-block;\n  min-width: 1.8rem;\n  padding: 0.08rem 0.45rem;\n  border-radius: 4px;\n  font-size: 0.88em;\n  font-weight: 700;\n  line-height: 1.4;\n  text-align: center;\n}\n\nbody.cms-editor-content .ce-label-orange {\n  color: #9a3412;\n  border: 2px solid #fb923c;\n  background: #fff7ed;\n}\n\nbody.cms-editor-content .ce-label-red {\n  color: #ffffff;\n  background: #dc5b35;\n}\n\nbody.cms-editor-content .ce-label-green {\n  color: #ffffff;\n  background: #67c23a;\n}\n\nbody.cms-editor-content .ce-label-blue {\n  color: #ffffff;\n  background: #3b82f6;\n}\n\nbody.cms-editor-content .ce-faq-mark {\n  display: inline-block;\n  min-width: 1.4rem;\n  border-radius: 999px;\n  background: #0f62a9;\n  color: #ffffff;\n  font-weight: 800;\n  text-align: center;\n}\n\nbody.cms-editor-content .classic-editor-search-match {\n  background: #fff3a3;\n}\n\nbody.cms-editor-content .classic-editor-search-match-current {\n  background: #ffd36b;\n}\n`,
-    contentStyle: '',
-};
-function label(labels, key, fallback) {
-    return labels?.[key] || fallback;
-}
-function normalizeCssUrl(url) {
-    return url.trim();
-}
-function createPresetUi(labels) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'classic-editor-package-presets';
-    wrapper.innerHTML = `
-    <span class="classic-editor-package-presets-label">${label(labels, 'presetPanel', 'Presets')}</span>
-    <div class="classic-editor-package-presets-list"></div>
-  `;
-    const list = wrapper.querySelector('.classic-editor-package-presets-list');
-    LEGACY_PRESETS.forEach((preset) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `classic-editor-package-preset classic-editor-package-preset-${preset.key}`;
-        button.dataset.presetKey = preset.key;
-        button.title = preset.title;
-        button.setAttribute('aria-label', preset.title);
-        button.textContent = preset.label;
-        list.appendChild(button);
-    });
-    return { wrapper, list };
-}
-function mergeProfiles(base, override) {
-    if (!override) {
-        return base;
-    }
-    return {
-        bodyClass: override.bodyClass ?? base.bodyClass,
-        blockFormats: override.blockFormats ?? base.blockFormats,
-        contentCssUrls: override.contentCssUrls
-            ? [...override.contentCssUrls]
-            : base.contentCssUrls,
-        inlineCss: override.inlineCss ?? base.inlineCss,
-        contentStyle: override.contentStyle ?? base.contentStyle,
-    };
-}
-async function loadStyleProfile(profileUrl) {
-    const response = await fetch(profileUrl, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to load editor style profile: ${response.status}`);
-    }
-    const profile = await response.json();
-    if (!profile || typeof profile !== 'object') {
-        throw new Error('Invalid editor style profile payload');
-    }
-    const next = {};
-    if (Array.isArray(profile.contentCssUrls)) {
-        next.contentCssUrls = profile.contentCssUrls
-            .map((value) => (typeof value === 'string' ? normalizeCssUrl(value) : ''))
-            .filter(Boolean);
-    }
-    if (typeof profile.inlineCss === 'string') {
-        next.inlineCss = profile.inlineCss;
-    }
-    if (typeof profile.contentStyle === 'string') {
-        next.contentStyle = profile.contentStyle;
-    }
-    if (typeof profile.bodyClass === 'string') {
-        next.bodyClass = profile.bodyClass;
-    }
-    if (typeof profile.blockFormats === 'string') {
-        next.blockFormats = profile.blockFormats;
-    }
-    return next;
-}
-export async function createClassicEditor(config) {
-    const { target, textarea, codeTextarea, submitField, tinyMceGlobal, tinymceBaseUrl, tinymceVersion = '1', contentCssUrl, labels, styleProfile, styleProfileUrl, mediaInsert, } = config;
-    const styleProfiles = [DEFAULT_EDITOR_STYLE_PROFILE];
-    if (contentCssUrl) {
-        styleProfiles.push({ contentCssUrls: [contentCssUrl] });
-    }
-    if (styleProfileUrl) {
-        try {
-            const loaded = await loadStyleProfile(styleProfileUrl);
-            styleProfiles.push(loaded);
-        }
-        catch (error) {
-            console.warn('Failed to load editor style profile, using defaults only', error);
-        }
-    }
-    if (styleProfile) {
-        styleProfiles.push(styleProfile);
-    }
-    const resolvedProfile = styleProfiles.reduce((current, next) => mergeProfiles(current, next), {});
-    const styleCss = [
-        resolvedProfile.contentStyle,
-        resolvedProfile.inlineCss,
-    ]
-        .filter((value) => typeof value === 'string' && value.trim().length > 0)
-        .join('\n\n');
-    const contentCss = (resolvedProfile.contentCssUrls || [])
-        .filter((url) => typeof url === 'string' && url.trim().length > 0)
-        .map((url) => `${normalizeCssUrl(url)}${tinymceVersion ? `?v=${tinymceVersion}` : ''}`)
-        .join(',');
-    let mode = 'visual';
-    let visualFullscreenActive = false;
-    let codeFullscreenActive = false;
-    const searchState = { query: '', total: 0, currentIndex: 0 };
-    const toolbar = document.createElement('div');
-    toolbar.className = 'classic-editor-package-toolbar';
-    toolbar.innerHTML = `
-    <div class="classic-editor-package-presets-host"></div>
-    <div class="classic-editor-package-search-host"></div>
-  `;
-    const presetHost = toolbar.querySelector('.classic-editor-package-presets-host');
-    target.prepend(toolbar);
-    const searchHost = toolbar.querySelector('.classic-editor-package-search-host');
-    const presetUi = createPresetUi(labels);
-    presetHost.replaceChildren(presetUi.wrapper);
-    const createSearchUi = () => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'classic-editor-package-search';
-        wrapper.innerHTML = `
-      <input type="search" class="classic-editor-package-search-input" autocomplete="off" spellcheck="false" />
-      <button type="button" data-direction="prev">${label(labels, 'searchPrev', 'Prev')}</button>
-      <span class="classic-editor-package-search-status" aria-live="polite"></span>
-      <button type="button" data-direction="next">${label(labels, 'searchNext', 'Next')}</button>
-    `;
-        return {
-            wrapper,
-            input: wrapper.querySelector('input'),
-            status: wrapper.querySelector('.classic-editor-package-search-status'),
-            prev: wrapper.querySelector('[data-direction="prev"]'),
-            next: wrapper.querySelector('[data-direction="next"]'),
-        };
-    };
-    const visualSearchUi = createSearchUi();
-    const codeSearchUi = createSearchUi();
-    searchHost.replaceChildren(codeSearchUi.wrapper);
-    searchHost.classList.add('hidden');
-    const updateStatus = (query, total, currentIndex) => {
-        if (!query.trim()) {
-            visualSearchUi.status.textContent = '';
-            codeSearchUi.status.textContent = '';
-            return;
-        }
-        if (!total) {
-            visualSearchUi.status.textContent = label(labels, 'noResults', 'No matches');
-            codeSearchUi.status.textContent = label(labels, 'noResults', 'No matches');
-            return;
-        }
-        const text = `${currentIndex} / ${total}`;
-        visualSearchUi.status.textContent = text;
-        codeSearchUi.status.textContent = text;
-    };
-    const syncInputs = (value, source) => {
-        searchState.query = value;
-        if (visualSearchUi.input !== source)
-            visualSearchUi.input.value = value;
-        if (codeSearchUi.input !== source)
-            codeSearchUi.input.value = value;
-    };
-    const editorList = await tinyMceGlobal.init({
-        target: textarea,
-        base_url: tinymceBaseUrl,
-        suffix: '.min',
-        menubar: 'file edit view insert format tools table',
-        promotion: false,
-        branding: false,
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: false,
-        browser_spellcheck: true,
-        contextmenu: 'undo redo | inserttable | cell row column deletetable | link',
-        toolbar_mode: 'wrap',
-        block_unsupported_drop: false,
-        plugins: 'advlist autolink anchor charmap code fullscreen hr image insertdatetime link lists media nonbreaking pagebreak paste preview searchreplace table visualblocks visualchars wordcount directionality',
-        toolbar: [
-            'blocks fontsize | bold italic removeformat underline blockquote bullist numlist alignleft aligncenter alignright | link unlink undo redo pastetext charmap pagebreak vietworklinkcard forecolor table vietworkfullscreen',
-        ],
-        body_class: resolvedProfile.bodyClass,
-        block_formats: resolvedProfile.blockFormats,
-        fontsize_formats: '8pt 10pt 12pt 14pt 18pt 24pt 36pt',
-        height: 520,
-        resize: true,
-        ...(contentCss ? { content_css: contentCss } : {}),
-        ...(styleCss ? { content_style: styleCss } : {}),
-        setup(instance) {
-            instance.formatter.register('lineboldyellow', {
-                inline: 'span',
-                classes: 'linebold_yellow',
-                exact: true,
-            });
-            instance.ui.registry.addToggleButton('yellowhighlight', {
-                text: label(labels, 'yellowHighlight', 'Yellow Highlight'),
-                tooltip: label(labels, 'yellowHighlight', 'Yellow Highlight'),
-                onAction: () => instance.execCommand('mceToggleFormat', false, 'lineboldyellow'),
-                onSetup: (api) => {
-                    const handler = (state) => api.setActive(state);
-                    instance.formatter.formatChanged('lineboldyellow', handler);
-                    return () => instance.formatter.formatChanged('lineboldyellow', handler, true);
-                },
-            });
-            instance.ui.registry.addButton('inlinecode', {
-                text: label(labels, 'source', 'Source'),
-                tooltip: label(labels, 'source', 'Source'),
-                onAction: () => switchMode('code'),
-            });
-            instance.ui.registry.addButton('vietworklinkcard', {
-                tooltip: 'Insert Linkcard',
-                text: 'Linkcard',
-                onAction: () => {
-                    const selectedText = String(instance.selection?.getContent?.({ format: 'text' }) || '').trim();
-                    const matched = selectedText.match(/((https?|file|ftp|data|ogg):\/\/[^ "<,]+)/i);
-                    const initialUrl = matched ? matched[1] : '';
-                    const url = window.prompt('Linkcard URL', initialUrl);
-                    if (!url)
-                        return;
-                    instance.focus();
-                    instance.selection.setContent(`<p>[blogcard url="${instance.dom.encode(String(url).trim())}"]</p>`);
-                },
-            });
-            instance.ui.registry.addButton('vietworkfullscreen', {
-                tooltip: 'Distraction-free writing mode',
-                icon: 'fullscreen',
-                onAction: () => {
-                    target.classList.toggle('is-fullscreen');
-                    document.body.classList.toggle('editor-fullscreen-active', target.classList.contains('is-fullscreen'));
-                    instance.execCommand('mceFullScreen');
-                },
-            });
-            instance.on('init', () => {
-                const header = instance.getContainer()?.querySelector('.tox-editor-header');
-                if (header && !header.querySelector('.classic-editor-package-search')) {
-                    header.appendChild(visualSearchUi.wrapper);
-                }
-            });
-            instance.on('FullscreenStateChanged', (event) => {
-                visualFullscreenActive = Boolean(event.state);
-                document.body.classList.toggle('editor-fullscreen-active', visualFullscreenActive || codeFullscreenActive);
-            });
-            instance.on('change input undo redo keyup SetContent', () => {
-                if (mode !== 'visual')
-                    return;
-                const html = instance.getContent();
-                codeTextarea.value = html;
-                submitField.value = html;
-            });
-        },
-        menu: {
-            file: { title: 'File', items: 'newdocument | print' },
-            edit: { title: 'Edit', items: 'undo redo | cut copy paste pastetext | selectall | searchreplace' },
-            view: { title: 'View', items: 'code | visualaid visualchars visualblocks | fullscreen' },
-            insert: { title: 'Insert', items: 'link media | inserttable charmap hr nonbreaking anchor insertdatetime | pagebreak' },
-            format: { title: 'Format', items: 'bold italic underline strikethrough | superscript subscript | blocks align | removeformat' },
-            tools: { title: 'Tools', items: 'code' },
-            table: { title: 'Table', items: 'inserttable tableprops deletetable | row column cell' },
-        },
-    });
-    const editor = editorList[0];
-    const applyVisualSearch = (step) => {
-        const query = searchState.query.trim();
-        const doc = editor.getDoc();
-        const win = editor.getWin();
-        if (!query || !doc?.body || !win) {
-            updateStatus('', 0, 0);
-            return;
-        }
-        const total = ((doc.body.innerText || doc.body.textContent || '').toLowerCase().match(new RegExp(query.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-        if (!total) {
-            updateStatus(query, 0, 0);
-            return;
-        }
-        if (step === 'first')
-            searchState.currentIndex = 1;
-        if (step === 'next')
-            searchState.currentIndex = searchState.currentIndex >= total ? 1 : searchState.currentIndex + 1;
-        if (step === 'prev')
-            searchState.currentIndex = searchState.currentIndex <= 1 ? total : searchState.currentIndex - 1;
-        win.find(query, false, step === 'prev', true, false, false, false);
-        updateStatus(query, total, searchState.currentIndex);
-    };
-    const applyCodeSearch = (step) => {
-        const query = searchState.query.trim();
-        if (!query) {
-            updateStatus('', 0, 0);
-            return;
-        }
-        const matches = Array.from(codeTextarea.value.matchAll(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')));
-        if (!matches.length) {
-            updateStatus(query, 0, 0);
-            return;
-        }
-        if (step === 'first')
-            searchState.currentIndex = 1;
-        if (step === 'next')
-            searchState.currentIndex = searchState.currentIndex >= matches.length ? 1 : searchState.currentIndex + 1;
-        if (step === 'prev')
-            searchState.currentIndex = searchState.currentIndex <= 1 ? matches.length : searchState.currentIndex - 1;
-        const active = matches[searchState.currentIndex - 1];
-        codeTextarea.setSelectionRange(active.index ?? 0, (active.index ?? 0) + active[0].length);
-        updateStatus(query, matches.length, searchState.currentIndex);
-    };
-    const applySearch = (step = 'first') => {
-        if (mode === 'visual') {
-            applyVisualSearch(step);
-            return;
-        }
-        applyCodeSearch(step);
-    };
-    const bindSearchUi = (ui) => {
-        ui.input.placeholder = label(labels, 'searchPlaceholder', 'Search editor');
-        const sync = () => {
-            syncInputs(ui.input.value, ui.input);
-            applySearch('first');
-        };
-        ui.input.addEventListener('input', sync);
-        ui.input.addEventListener('change', sync);
-        ui.prev.addEventListener('click', () => applySearch('prev'));
-        ui.next.addEventListener('click', () => applySearch('next'));
-    };
-    bindSearchUi(visualSearchUi);
-    bindSearchUi(codeSearchUi);
-    presetUi.list.addEventListener('click', (event) => {
-        const button = event.target instanceof HTMLElement ? event.target.closest('[data-preset-key]') : null;
-        if (!(button instanceof HTMLButtonElement))
-            return;
-        const preset = LEGACY_PRESETS.find((item) => item.key === button.dataset.presetKey);
-        if (!preset)
-            return;
-        if (mode === 'code') {
-            const selectedText = codeTextarea.value.slice(codeTextarea.selectionStart ?? 0, codeTextarea.selectionEnd ?? 0);
-            const html = preset.insertHtml(selectedText);
-            const start = codeTextarea.selectionStart ?? codeTextarea.value.length;
-            const end = codeTextarea.selectionEnd ?? codeTextarea.value.length;
-            codeTextarea.setRangeText(html, start, end, 'end');
-            submitField.value = codeTextarea.value;
-            return;
-        }
-        editor.focus();
-        const selectedHtml = String(editor.selection?.getContent?.() || '');
-        editor.selection.setContent(preset.insertHtml(selectedHtml));
-        const current = editor.getContent();
-        codeTextarea.value = current;
-        submitField.value = current;
-    });
-    function switchMode(nextMode) {
-        if (nextMode === mode)
-            return;
-        if (nextMode === 'code') {
-            codeTextarea.value = editor.getContent();
-            submitField.value = codeTextarea.value;
-            if (visualFullscreenActive) {
-                editor.execCommand('mceFullScreen');
-            }
-            textarea.closest('.classic-editor-panel')?.classList.add('hidden');
-            codeTextarea.closest('.classic-editor-panel')?.classList.remove('hidden');
-            searchHost.classList.remove('hidden');
-            mode = 'code';
-            applySearch('first');
-            return;
-        }
-        if (codeFullscreenActive) {
-            codeFullscreenActive = false;
-            document.body.classList.toggle('editor-fullscreen-active', visualFullscreenActive);
-        }
-        editor.setContent(codeTextarea.value || '', { format: 'raw' });
-        submitField.value = codeTextarea.value || '';
-        codeTextarea.closest('.classic-editor-panel')?.classList.add('hidden');
-        textarea.closest('.classic-editor-panel')?.classList.remove('hidden');
-        searchHost.classList.add('hidden');
-        mode = 'visual';
-        applySearch('first');
-    }
-    return {
-        switchMode,
-        insertHtml(html) {
-            if (!html)
-                return;
-            if (mode === 'code') {
-                const start = codeTextarea.selectionStart ?? codeTextarea.value.length;
-                const end = codeTextarea.selectionEnd ?? codeTextarea.value.length;
-                codeTextarea.setRangeText(html, start, end, 'end');
-                submitField.value = codeTextarea.value;
-                return;
-            }
-            editor.insertContent(html);
-            const current = editor.getContent();
-            codeTextarea.value = current;
-            submitField.value = current;
-            if (mediaInsert) {
-                mediaInsert(html);
-            }
-        },
-        async destroy() {
-            await editor.remove();
-        },
-    };
 }

@@ -3,6 +3,7 @@ const HTML_HEADERS = { "content-type": "text/html; charset=utf-8" };
 const JS_HEADERS = { "content-type": "text/javascript; charset=utf-8" };
 const CSS_HEADERS = { "content-type": "text/css; charset=utf-8" };
 
+const DEFAULT_SHARED_RAW_BASE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main";
 const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js";
 const DEFAULT_EDITOR_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-style.css";
 const DEFAULT_EDITOR_CONTENT_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-content.css";
@@ -147,6 +148,20 @@ function sharedAssetHeaders() {
   return headers;
 }
 
+function mimeTypeForPath(pathname) {
+  if (pathname.endsWith(".css")) return "text/css; charset=utf-8";
+  if (pathname.endsWith(".js")) return "text/javascript; charset=utf-8";
+  if (pathname.endsWith(".json")) return "application/json; charset=utf-8";
+  if (pathname.endsWith(".png")) return "image/png";
+  if (pathname.endsWith(".gif")) return "image/gif";
+  if (pathname.endsWith(".svg")) return "image/svg+xml";
+  if (pathname.endsWith(".woff")) return "font/woff";
+  if (pathname.endsWith(".woff2")) return "font/woff2";
+  if (pathname.endsWith(".ttf")) return "font/ttf";
+  if (pathname.endsWith(".eot")) return "application/vnd.ms-fontobject";
+  return "application/octet-stream";
+}
+
 async function fetchSharedAsset(env, envVar, fallbackUrl) {
   const assetUrl = env?.[envVar] || fallbackUrl;
   if (!assetUrl) {
@@ -164,6 +179,22 @@ async function fetchSharedAsset(env, envVar, fallbackUrl) {
     cache: "no-store",
   });
   return response;
+}
+
+async function fetchSharedRawPath(env, pathname) {
+  const response = await fetchSharedAsset(env, null, `${DEFAULT_SHARED_RAW_BASE_URL}${pathname}`);
+  if (!response || !response.ok) {
+    const status = response?.status || 500;
+    return htmlResponse(`Shared asset not found: ${pathname}`, status);
+  }
+  const body = await response.arrayBuffer();
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": mimeTypeForPath(pathname),
+      "cache-control": "public, max-age=300",
+    },
+  });
 }
 
 async function fetchSharedEditorStyle(env) {
@@ -329,37 +360,18 @@ function renderClassicEditorHtml(initialValue) {
         </div>
 
         <div id="wp-content-editor-editor-container" class="wp-editor-container">
-          <div class="classic-editor-panel">
           <textarea
             id="content-editor"
-            name="content-visual"
+            name="content"
             class="wp-editor-area"
             rows="20"
             cols="40"
             autocomplete="off"
-            data-editor-visual
             data-editor-textarea
           >${safeContent}</textarea>
         </div>
-        <textarea
-          id="content-editor-code"
-          name="content-code"
-          class="classic-editor-panel hidden"
-          autocomplete="off"
-          rows="20"
-          cols="40"
-          data-editor-code
-        ></textarea>
-        <textarea
-          id="content-editor-submit"
-          name="content"
-          class="classic-editor-panel hidden"
-          data-editor-submit-field
-        ></textarea>
-        </div>
       </div>
     </div>
-  </div>
 `;
 }
 
@@ -409,7 +421,6 @@ function pageShell({ title = "", content = "" } = {}) {
 
     <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@7.8.0/tinymce.min.js" referrerpolicy="origin"></script>
     <script type="module" src="/editor-lib.js"></script>
   </body>
 </html>`;
@@ -480,7 +491,6 @@ function cmsPageShell({ title = "", content = "" } = {}) {
 
     <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@7.8.0/tinymce.min.js" referrerpolicy="origin"></script>
     <script type="module" src="/editor-lib.js"></script>
   </body>
 </html>`;
@@ -597,6 +607,10 @@ export default {
 
       if (pathname === "/editor-content.css" && request.method === "GET") {
         return fetchSharedEditorContentStyle(env);
+      }
+
+      if (pathname.startsWith("/assets/") && request.method === "GET") {
+        return fetchSharedRawPath(env, pathname);
       }
 
       if (pathname === "/assets" || pathname.startsWith("/assets/") || pathname === "/favicon.ico") {

@@ -1,0 +1,167 @@
+msgid ""
+msgstr ""
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Project-Id-Version: Visual Editor Custom Buttons\n"
+"POT-Creation-Date: 2017-11-19 14:46+0100\n"
+"PO-Revision-Date: 2017-11-19 15:00+0100\n"
+"Language-Team: Tor-Bjorn Fjellner\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.0.4\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-Flags-xgettext: --add-comments=translators:\n"
+"X-Poedit-WPHeader: visual-editor-custom-buttons.php\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
+"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
+"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"Last-Translator: Tor-Bjorn Fjellner\n"
+"Language: sv_SE\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.js\n"
+
+#: visual-editor-custom-buttons.php:45
+msgid "Visual Editor Custom Buttons Settings"
+msgstr "Inställningar för Visual Editor Custom Buttons"
+
+#: visual-editor-custom-buttons.php:83
+msgid "Display buttons on row"
+msgstr "Visa knapparna i en rad"
+
+#: visual-editor-custom-buttons.php:85
+msgid "Row 1"
+msgstr "Rad 1"
+
+#: visual-editor-custom-buttons.php:87
+msgid "Row 2"
+msgstr "Rad 2"
+
+#: visual-editor-custom-buttons.php:88
+msgid "Row 3"
+msgstr "Rad 3"
+
+#: visual-editor-custom-buttons.php:91
+msgid "Allow other user roles to administer buttons"
+msgstr "Tillåt att andra användarroller administrerar knappar"
+
+#. Plugin Name of the plugin/theme
+#: visual-editor-custom-buttons.php:506 visual-editor-custom-buttons.php:518
+msgid "Visual Editor Custom Buttons"
+msgstr "Visual Editor Custom Buttons"
+
+#: visual-editor-custom-buttons.php:507
+msgid "Custom button"
+msgstr "Anpassad knapp"
+
+#: visual-editor-custom-buttons.php:508
+msgid "Add new"
+msgstr "Lägg till ny"
+
+#: visual-editor-custom-buttons.php:509
+msgid "Add new button"
+msgstr "Lägg till ny knapp"
+
+#: visual-editor-custom-buttons.php:510
+msgid "Edit button"
+msgstr "Redigera knapp"
+
+#: visual-editor-custom-buttons.php:511
+msgid "New button"
+msgstr "Ny knapp"
+
+#: visual-editor-custom-buttons.php:512
+msgid "All buttons"
+msgstr "Alla knappar"
+
+#: visual-editor-custom-buttons.php:513
+msgid "View button"
+msgstr "Se knapp"
+
+#: visual-editor-custom-buttons.php:514
+msgid "Search buttons"
+msgstr "Sök knappar"
+
+#: visual-editor-custom-buttons.php:515
+msgid "No buttons found"
+msgstr "Inga knappar funna"
+
+#: visual-editor-custom-buttons.php:516
+msgid "No buttons found in trash"
+msgstr "Inga knappar funna i papperskorgen"
+
+#: visual-editor-custom-buttons.php:581
+msgid "Wrap Selection"
+msgstr "Kapsla in markering"
+
+#: visual-editor-custom-buttons.php:585
+msgid "Before"
+msgstr "Före"
+
+#: visual-editor-custom-buttons.php:588
+msgid "After"
+msgstr "Efter"
+
+#: visual-editor-custom-buttons.php:591
+msgid "Content"
+msgstr "Innehåll"
+
+#: visual-editor-custom-buttons.php:755
+msgid "Visual Editor"
+msgstr "Visuell redigerare"
+
+#: visual-editor-custom-buttons.php:757
+msgid "Text Editor"
+msgstr "Textredigerare"
+
+#: visual-editor-custom-buttons.php:761
+msgid "Button Icon"
+msgstr "Knappikon"
+
+#: visual-editor-custom-buttons.php:801
+msgid "Preview"
+msgstr "Förhandsvisning"
+
+#: visual-editor-custom-buttons.php:804
+msgid ""
+"Add your custom icons by creating a new folder called <strong>vecb</strong> "
+"in the wordpress upload directory and adding your icons (40x40px) there. The "
+"correct path for the custom icons should be: <br>\n"
+"\t<strong>...wp-content/uploads/vecb/</strong>. When added, the icons will "
+"automatically show up the Button Icon dropdown-menu."
+msgstr ""
+"Lägg till dina anpassade ikoner genom att skapa en ny katalog med namnet "
+"<strong>vecb</strong> i uppladdningskatalogen för WordPress och lägga in "
+"dina ikoner (40x40px) där. Den korrekta sökvägen till ikonerna bör vara: "
+"<br>\n"
+"\t<strong>…wp-content/uploads/vecb/</strong>. När ikonerna lagts till kommer "
+"de automatiskt att synas i rullgardinsmenyn med knappikoner."
+
+#: visual-editor-custom-buttons.php:818
+msgid "Quicktag Label"
+msgstr "Quicktag-etikett"
+
+#: visual-editor-custom-buttons.php:819
+msgid "If not set, button title will be used."
+msgstr "Om inget angetts kommer knapprubriken att användas."
+
+#: visual-editor-custom-buttons.php:831
+msgid ""
+"Only for visualization in the Visual Editor. Use normal stylesheet for Front "
+"End styling."
+msgstr ""
+"Endast för visning i den visuella redigeraren. Använd det normala "
+"stildokumentet för styling av publika sidor."
+
+#. Plugin URI of the plugin/theme
+#. Author URI of the plugin/theme
+msgid "http://eborninteractive.se"
+msgstr "http://eborninteractive.se"
+
+#. Description of the plugin/theme
+msgid "Create custom buttons in Wordpress Visual Editor."
+msgstr "Skapa anpassade knappar i den visuella redigeraren i WordPress."
+
+#. Author of the plugin/theme
+msgid "Ola Eborn"
+msgstr "Ola Eborn"
