@@ -106,19 +106,26 @@ async function fetchPrivateEditorLib(env) {
   }
 
   const token = env?.CICEROLMS_GH_TOKEN;
-  if (!token) {
-    return jsonResponse({ ok: false, error: "missing-github-token" }, 500);
+  const headers = {
+    "User-Agent": "test-tinymce-editor",
+    Accept: "application/octet-stream",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(editorLibUrl, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "User-Agent": "test-tinymce-editor",
-      Accept: "application/octet-stream",
-    },
+    headers,
     cache: "no-store",
   });
   if (!response.ok) {
+    if (!token && response.status === 404) {
+      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (configure CICEROLMS_GH_TOKEN for private repo access)` }, response.status);
+    }
+    if (!token && response.status === 403) {
+      return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status} (unauthorized for private repo)` }, response.status);
+    }
     return jsonResponse({ ok: false, error: `failed-editor-lib-fetch:${response.status}` }, response.status);
   }
 
