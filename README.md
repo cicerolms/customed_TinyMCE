@@ -4,7 +4,7 @@ Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects.
 
 This package provides a reusable classic TinyMCE editing stack for SSR projects:
 
-- Visual and inline source editing
+- Inline visual review/editing plus source editing
 - Fullscreen editing
 - TinyMCE search and replace through the legacy plugin menu
 - Reusable toolbar actions
@@ -50,8 +50,6 @@ At minimum, your app needs to provide:
 - one textarea inside it
 - TinyMCE legacy assets under `/assets`
 - a worker-served `styles.css`
-- `/editor-style-profile.css`
-- `/editor-style-profile.json`
 
 ## What stays outside this package
 
@@ -59,7 +57,7 @@ Keep these in each app repo:
 
 - Worker asset hosting and TinyMCE static file delivery
 - Tailwind build output (`styles.css`)
-- Editor extend stylesheet and JSON style profile contract
+- Page/review presentation CSS for rendered article content
 - Media picker modal routes
 - Project i18n dictionaries
 - Form templates and persistence wiring
@@ -98,16 +96,12 @@ Initialize with:
 
 `styleProfile` fields:
 
-- `contentCssUrls`: array of CSS URLs passed to TinyMCE `content_css` in order.
-- `bodyClass`: TinyMCE `body_class` value.
+- `bodyClass`: classes applied to the inline review fragment container. Default: `cms-editor-content`.
 - `blockFormats`: TinyMCE `block_formats` value.
-- `css.self` / `css.extend`: inline CSS strings appended to TinyMCE `content_style`.
-- `extendCssUrl`: compatibility field that can stay in your JSON contract, but this package does not fetch it automatically.
-- `inlineCss` / `contentStyle`: legacy compatibility fields.
 
 Rule of thumb:
 
-- keep editor-specific presentation in your app-owned extend stylesheet referenced by `contentCssUrls`
+- style the review surface through normal page CSS loaded by your app
 - treat shared package CSS as runtime/shared app styling, not as the source of article-body presentation
 
 `i18n` fields:
@@ -170,16 +164,21 @@ Compatibility:
 ```html
 <form id="post-editor-form" method="post">
   <section data-classic-editor>
+    <button type="button" data-editor-tab="visual">Visual</button>
+    <button type="button" data-editor-tab="code">Code</button>
     <textarea
       id="content"
       name="content"
       data-editor-textarea
     ></textarea>
+    <div data-editor-fragment class="cms-editor-content"></div>
   </section>
   <button type="submit">Save</button>
 </form>
 <div id="save-status"></div>
 ```
+
+The `[data-editor-fragment]` container is the inline visual review surface. If you omit it, the package creates one next to the textarea automatically.
 
 `bootstrapClassicEditor()` also auto-runs on page load when `[data-classic-editor]` is present, so a host app can either call it explicitly or rely on the built-in auto-boot path.
 
@@ -196,24 +195,18 @@ Recommended consuming-worker flow:
 1. Import or point your worker Tailwind build at the shared `assets/tailwind.css`.
 2. Build your worker-owned `styles.css` during deploy.
 3. Serve that built `styles.css` locally from the worker.
-4. Link public pages to `styles.css`.
-5. Expose a worker CSS route for your editor extend stylesheet:
-   - `editor-style-profile.css` from your worker-local extend stylesheet
-6. Point TinyMCE `contentCssUrls` at the worker-served stylesheets you want inside the iframe.
-   Keep all editor-specific presentation in `/editor-style-profile.css`.
-7. Link public pages to:
-   - `/styles.css`
-   - `/editor-style-profile.css`
-8. Keep reusable shared app CSS in the package and keep article-body/editor presentation in the worker repo.
-9. Use the shared `U1` to `U5` toolbar buttons to apply `.utility_1` to `.utility_5`, then style those classes in the worker-local extend CSS.
+4. Link public pages to `styles.css` and your own article/review CSS.
+5. Style the inline review fragment with normal page selectors such as `.cms-editor-content`.
+6. Keep reusable shared app CSS in the package and keep article-body/editor presentation in the worker repo.
+7. Use the shared `U1` to `U5` toolbar buttons to apply `.utility_1` to `.utility_5`, then style those classes in your app CSS.
 
 Recommended worker style split:
 
 - shared package:
   - `styles.css`
 - app repo:
-  - `editor-style-extend.css`
-  - `editor-style-profile.json`
+  - article/review presentation CSS
+  - optional `editor-style-profile.json` for `blockFormats` and fragment classes
 
 ## Worker integration
 
@@ -221,30 +214,24 @@ Recommended worker style split:
 2. Bundle this package into your browser entrypoint.
 3. Pass `i18n.lang` and `i18n.t` from your frontend locale store when you initialize the editor.
 4. Build and serve a worker-owned `styles.css` from the shared Tailwind asset.
-5. Serve a worker CSS route for your extend stylesheet.
-6. Pass those local stylesheet URLs in `contentCssUrls` so the editor iframe and public page stay in sync.
-7. If you keep `extendCssUrl` in the JSON payload for your own app code, treat it as app metadata rather than something this package resolves on its own.
+5. Load your normal article/review CSS on the page so the inline fragment renders with production-like styles.
+6. If you keep `styleProfileUrl`, use it for `blockFormats` and fragment classes, not for iframe stylesheet loading.
 
 Example `editor-style-profile.json`:
 
 ```json
 {
-  "contentCssUrls": [
-    "/editor-style-profile.css"
-  ],
   "blockFormats": "Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre",
-  "bodyClass": "cms-editor-content",
-  "extendCssUrl": "/editor-style-extend.css"
+  "bodyClass": "cms-editor-content article-body"
 }
 ```
 
 Suggested worker routes:
 
 - `/editor-lib.js` -> shared repo `dist/index.js`
-- `/editor-style-profile.css` -> your app-local `editor-style-extend.css`
 - `/styles.css` -> your worker-built Tailwind output
 
-The important integration point is the `contentCssUrls` array. The editor iframe only loads stylesheets that are either part of the default shared stack or explicitly listed there. If you want all editor-specific presentation to live in extend, keep that presentation in `/editor-style-profile.css` and avoid putting `.cms-editor-content` rules in shared package CSS.
+The important integration point is the inline fragment class hook, not an iframe stylesheet list. The package renders HTML directly into the page, so the review surface picks up whatever CSS your app already ships for `.cms-editor-content` or your custom `bodyClass` value.
 
 ## Utility buttons
 
@@ -256,7 +243,7 @@ The shared toolbar includes `U1` to `U5`.
 - `U4` wraps the selected text with `.utility_4`
 - `U5` wraps the selected text with `.utility_5`
 
-This lets each consuming app define its own presentation in `editor-style-extend.css` without changing the shared editor runtime.
+This lets each consuming app define its own presentation in normal page CSS without changing the shared editor runtime.
 
 ## Extraction plan
 

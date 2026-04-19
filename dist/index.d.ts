@@ -8,18 +8,9 @@ export type ClassicEditorI18nConfig = {
     lang?: string;
     t?: (key: string, fallback?: string) => string;
 };
-export type EditorStyleProfileCss = {
-    self?: string;
-    extend?: string;
-};
 export type EditorStyleProfile = {
-    contentCssUrls?: string[];
-    inlineCss?: string;
     bodyClass?: string;
     blockFormats?: string;
-    contentStyle?: string;
-    extendCssUrl?: string;
-    css?: EditorStyleProfileCss;
 };
 export type ClassicEditorConfig = {
     target: HTMLElement;

@@ -1,33 +1,34 @@
-import { createClassicEditor } from 'classic-editor-shell';
+import { createClassicEditor, dispatchClassicEditorI18n } from "classic-editor-shell";
 
 async function boot() {
-  const root = document.querySelector('[data-classic-editor]');
+  const root = document.querySelector("[data-classic-editor]");
   if (!(root instanceof HTMLElement)) return;
 
-  const textarea = root.querySelector('[data-editor-visual]');
-  const codeTextarea = root.querySelector('[data-editor-code]');
-  const submitField = root.querySelector('[data-editor-submit-field]');
+  const textarea = root.querySelector("[data-editor-textarea]");
+  if (!(textarea instanceof HTMLTextAreaElement)) return;
 
-  if (!(textarea instanceof HTMLTextAreaElement) || !(codeTextarea instanceof HTMLTextAreaElement) || !(submitField instanceof HTMLTextAreaElement)) {
-    return;
-  }
-
-  const tinymce = (window as any).tinymce;
-  if (!tinymce) return;
-
-  await createClassicEditor({
+  const editor = await createClassicEditor({
     target: root,
     textarea,
-    codeTextarea,
-    submitField,
-    tinyMceGlobal: tinymce,
-    tinymceBaseUrl: '/assets/vendor/tinymce',
-    styleProfileUrl: '/assets/editor-classic-style-profile.json',
-    labels: {
-      source: 'Source',
-      yellowHighlight: 'Yellow Highlight',
+    assetBaseUrl: "/assets",
+    styleProfileUrl: "/editor-style-profile.json",
+    i18n: {
+      lang: "ja",
+      t: (key, fallback) => fallback || key,
     },
+  });
+
+  const localeSelect = document.querySelector("[data-editor-locale]");
+  localeSelect?.addEventListener("change", (event) => {
+    const nextLocale = (event.target as HTMLSelectElement).value;
+    dispatchClassicEditorI18n({ lang: nextLocale });
+  });
+
+  const previewButton = document.querySelector("[data-editor-preview]");
+  previewButton?.addEventListener("click", () => {
+    editor.syncToTextarea();
+    window.open(`data:text/html,${encodeURIComponent(textarea.value)}`, "_blank", "noopener");
   });
 }
 
-boot().catch(() => null);
+void boot();

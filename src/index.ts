@@ -1,5 +1,4 @@
 import {
-  defaultLegacyContentCssUrls,
   ensureLegacyEditorGlobals,
   LEGACY_EDITOR_VERSION,
   LEGACY_INSERT_MENU_ITEMS,
@@ -26,19 +25,9 @@ export type ClassicEditorI18nConfig = {
   t?: (key: string, fallback?: string) => string;
 };
 
-export type EditorStyleProfileCss = {
-  self?: string;
-  extend?: string;
-};
-
 export type EditorStyleProfile = {
-  contentCssUrls?: string[];
-  inlineCss?: string;
   bodyClass?: string;
   blockFormats?: string;
-  contentStyle?: string;
-  extendCssUrl?: string;
-  css?: EditorStyleProfileCss;
 };
 
 export type ClassicEditorConfig = {
@@ -115,6 +104,8 @@ type WindowWithEditor = LegacyEditorHostWindow & {
   __classicEditorAutoBootDone?: boolean;
 };
 
+type TinyMceInitConfig = Record<string, unknown>;
+
 const DEFAULT_ASSET_BASE_URL = "/assets";
 const LEGACY_VECB_PLUGIN_NAMES = Array.from({ length: 18 }, (_, index) => `vecb_button${index + 1}`);
 const LEGACY_UTILITY_BUTTON_NAMES = Array.from({ length: 5 }, (_, index) => `utility_${index + 1}`);
@@ -124,14 +115,6 @@ const LEGACY_PLUGIN_LIST = [LEGACY_PLUGINS, ...LEGACY_VECB_PLUGIN_NAMES].join(",
 const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
   bodyClass: "cms-editor-content",
   blockFormats: "Paragraph=p;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre",
-  contentCssUrls: [],
-  inlineCss: "",
-  contentStyle: "",
-  extendCssUrl: "",
-  css: {
-    self: "",
-    extend: "",
-  },
 };
 
 const LEGACY_EDITOR_UI_TRANSLATIONS: Record<string, Record<string, string>> = {
@@ -295,22 +278,11 @@ export function dispatchClassicEditorI18n(nextI18n: ClassicEditorI18nConfig): vo
   document.dispatchEvent(new CustomEvent("classic-editor:i18n-change", { detail: nextI18n }));
 }
 
-function normalizeCssUrl(url: string): string {
-  return url.trim();
-}
-
 function mergeProfiles(base: EditorStyleProfile, override?: EditorStyleProfile | null): EditorStyleProfile {
   if (!override) return base;
   return {
     bodyClass: override.bodyClass ?? base.bodyClass,
     blockFormats: override.blockFormats ?? base.blockFormats,
-    contentCssUrls: override.contentCssUrls ? [...override.contentCssUrls] : base.contentCssUrls,
-    inlineCss: override.inlineCss ?? base.inlineCss,
-    contentStyle: override.contentStyle ?? base.contentStyle,
-    css: {
-      self: override.css?.self ?? base.css?.self,
-      extend: override.css?.extend ?? base.css?.extend,
-    },
   };
 }
 
@@ -329,43 +301,46 @@ async function loadStyleProfile(profileUrl: string): Promise<EditorStyleProfile>
   }
 
   const next: EditorStyleProfile = {};
-  if (Array.isArray((profile as Record<string, unknown>).contentCssUrls)) {
-    next.contentCssUrls = ((profile as Record<string, unknown>).contentCssUrls as unknown[])
-      .map((value) => (typeof value === "string" ? normalizeCssUrl(value) : ""))
-      .filter(Boolean);
-  }
-  if (typeof (profile as Record<string, unknown>).inlineCss === "string") {
-    next.inlineCss = (profile as Record<string, unknown>).inlineCss as string;
-  }
-  if (typeof (profile as Record<string, unknown>).contentStyle === "string") {
-    next.contentStyle = (profile as Record<string, unknown>).contentStyle as string;
-  }
   if (typeof (profile as Record<string, unknown>).bodyClass === "string") {
     next.bodyClass = (profile as Record<string, unknown>).bodyClass as string;
   }
   if (typeof (profile as Record<string, unknown>).blockFormats === "string") {
     next.blockFormats = (profile as Record<string, unknown>).blockFormats as string;
   }
-  if (typeof (profile as Record<string, unknown>).extendCssUrl === "string") {
-    next.extendCssUrl = (profile as Record<string, unknown>).extendCssUrl as string;
-  }
-  if (typeof (profile as Record<string, unknown>).css === "object" && (profile as Record<string, unknown>).css !== null) {
-    const css = (profile as Record<string, unknown>).css as Record<string, unknown>;
-    next.css = {
-      self: typeof css.self === "string" ? css.self : "",
-      extend: typeof css.extend === "string" ? css.extend : "",
-    };
-  }
 
   return next;
 }
 
-function resolveEditorBodyClass(profile: EditorStyleProfile): string {
+function resolveReviewBodyClass(profile: EditorStyleProfile): string {
   return String(profile.bodyClass || DEFAULT_EDITOR_STYLE_PROFILE.bodyClass)
     .split(/\s+/)
     .map((value) => value.trim())
     .filter(Boolean)
     .join(" ");
+}
+
+function ensureEditorFragmentHost(target: HTMLElement, textarea: HTMLTextAreaElement, className: string): HTMLElement {
+  const existing = target.querySelector("[data-editor-fragment]");
+  const fragment = existing instanceof HTMLElement ? existing : document.createElement("div");
+
+  if (!(existing instanceof HTMLElement)) {
+    fragment.setAttribute("data-editor-fragment", "true");
+    fragment.setAttribute("aria-label", "Visual editor");
+    fragment.className = "classic-editor-fragment";
+    textarea.insertAdjacentElement("afterend", fragment);
+  }
+
+  const mergedClasses = new Set(["classic-editor-fragment", ...className.split(/\s+/).filter(Boolean)]);
+  fragment.className = Array.from(mergedClasses).join(" ");
+  fragment.hidden = true;
+  return fragment;
+}
+
+function ensureElementId(element: HTMLElement, fallbackId: string): string {
+  if (!element.id) {
+    element.id = fallbackId;
+  }
+  return element.id;
 }
 
 async function loadScript(url: string): Promise<void> {
@@ -665,18 +640,13 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   const assetBaseUrl = getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL);
   const visualTab = target.querySelector('[data-editor-tab="visual"]');
   const codeTab = target.querySelector('[data-editor-tab="code"]');
-  const wrap = resolveLegacyEditorWrap(target);
+  const wrap = resolveLegacyEditorWrap(target) || target;
 
-  if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement) || !(wrap instanceof HTMLElement)) {
-    throw new Error("Classic editor target is missing the legacy editor wrapper structure.");
+  if (!(visualTab instanceof HTMLButtonElement) || !(codeTab instanceof HTMLButtonElement)) {
+    throw new Error("Classic editor target is missing the visual/code tab buttons.");
   }
 
-  const profileStack: EditorStyleProfile[] = [
-    {
-      ...DEFAULT_EDITOR_STYLE_PROFILE,
-      contentCssUrls: defaultLegacyContentCssUrls(assetBaseUrl),
-    },
-  ];
+  const profileStack: EditorStyleProfile[] = [{ ...DEFAULT_EDITOR_STYLE_PROFILE }];
 
   if (styleProfileUrl) {
     try {
@@ -690,18 +660,9 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   }
 
   const resolvedProfile = profileStack.reduce((current, next) => mergeProfiles(current, next), {} as EditorStyleProfile);
-  const contentCssUrls = (resolvedProfile.contentCssUrls || [])
-    .filter((url): url is string => typeof url === "string" && url.trim().length > 0)
-    .map((url) => `${normalizeCssUrl(url)}?v=${LEGACY_EDITOR_VERSION}`);
-  const contentStyle = [
-    resolvedProfile.css?.self,
-    resolvedProfile.css?.extend,
-    resolvedProfile.contentStyle,
-    resolvedProfile.inlineCss,
-  ]
-    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-    .join("\n\n");
-  const editorBodyClass = resolveEditorBodyClass(resolvedProfile);
+  const editorBodyClass = resolveReviewBodyClass(resolvedProfile);
+  const fragment = ensureEditorFragmentHost(target, textarea, editorBodyClass);
+  const fragmentId = ensureElementId(fragment, `${textarea.id || "classic-editor"}-visual`);
 
   const tinymce = await waitForLegacyTinyMce(assetBaseUrl);
   await loadLegacyPluginScripts(tinymce, assetBaseUrl);
@@ -712,15 +673,36 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
   let mode: "visual" | "code" = "visual";
   const editorId = textarea.id;
 
+  const syncTextareaFromEditor = () => {
+    if (mode !== "visual" || !editor || editor.removed) {
+      return;
+    }
+    textarea.value = String(editor.getContent?.() || fragment.innerHTML || "");
+  };
+
+  const syncTextareaFromCode = () => {
+    if (mode === "code") {
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  const syncFragmentFromTextarea = () => {
+    fragment.innerHTML = textarea.value || "";
+  };
+
   const renderMode = () => {
     wrap.classList.toggle("tmce-active", mode === "visual");
     wrap.classList.toggle("html-active", mode === "code");
     visualTab.setAttribute("aria-pressed", String(mode === "visual"));
     codeTab.setAttribute("aria-pressed", String(mode === "code"));
+    fragment.hidden = mode !== "visual";
+    textarea.hidden = mode === "visual";
   };
 
-  const getLegacyConfig = () => ({
-    selector: `#${editorId}`,
+  const getLegacyConfig = (): TinyMceInitConfig => ({
+    target: fragment,
+    inline: true,
+    hidden_input: false,
     language: editorLang,
     theme: "modern",
     skin: "lightgray",
@@ -741,16 +723,17 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     plugins: LEGACY_PLUGIN_LIST,
     block_formats: resolvedProfile.blockFormats || DEFAULT_EDITOR_STYLE_PROFILE.blockFormats,
     fontsize_formats: "8pt 10pt 12pt 14pt 18pt 24pt 36pt",
-    content_css: contentCssUrls,
-    ...(contentStyle ? { content_style: contentStyle } : {}),
-      body_class: editorBodyClass,
-      wordpress_adv_hidden: LEGACY_WORDPRESS_ADV_HIDDEN,
-      table_toolbar: false,
-      table_responsive_width: true,
-      menu: {
+    body_class: editorBodyClass,
+    wordpress_adv_hidden: LEGACY_WORDPRESS_ADV_HIDDEN,
+    table_toolbar: false,
+    table_responsive_width: true,
+    menu: {
       file: { title: translate("editor.menu.file", "ファイル", activeI18n), items: "newdocument | print" },
       edit: { title: translate("editor.menu.edit", "編集", activeI18n), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
-      view: { title: translate("editor.menu.view", "表示", activeI18n), items: "code | visualaid visualchars visualblocks | fullscreen" },
+      view: {
+        title: translate("editor.menu.view", "表示", activeI18n),
+        items: "code | visualaid visualchars visualblocks | classiceditorfullscreen",
+      },
       insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: LEGACY_INSERT_MENU_ITEMS },
       format: { title: translate("editor.menu.format", "フォーマット", activeI18n), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
       tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "code" },
@@ -758,6 +741,7 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     },
     init_instance_callback(instance: LegacyTinyMce) {
       editor = instance;
+      syncTextareaFromEditor();
       localizeLegacyMenubar(instance, activeI18n);
     },
     setup(instance: LegacyTinyMce) {
@@ -786,6 +770,14 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
           toggleEditorFullscreen(target, instance);
         },
       });
+      instance.addMenuItem("classiceditorfullscreen", {
+        text: translate("editor.fullscreen.writer", "Distraction-free writing mode", activeI18n),
+        icon: "fullscreen",
+        context: "view",
+        onclick() {
+          toggleEditorFullscreen(target, instance);
+        },
+      });
       LEGACY_UTILITY_BUTTON_NAMES.forEach((buttonName, index) => {
         const utilityClass = `utility_${index + 1}`;
         instance.addButton(buttonName, {
@@ -799,7 +791,11 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
       instance.on("focus", () => {
         markLegacyActiveEditor(window as WindowWithEditor, editorId);
       });
+      instance.on("change input undo redo setcontent paste keyup", () => {
+        syncTextareaFromEditor();
+      });
       instance.on("init", () => {
+        syncTextareaFromEditor();
         localizeLegacyMenubar(instance, activeI18n);
       });
       instance.on("remove", () => {
@@ -813,15 +809,16 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     if (editor && !editor.removed) {
       return editor;
     }
+    syncFragmentFromTextarea();
     const instances = await tinymce.init(getLegacyConfig());
-    editor = instances[0] || tinymce.get(editorId) || null;
+    editor = instances[0] || tinymce.get(fragmentId) || null;
     return editor;
   };
 
   const removeVisualEditor = (): void => {
-    const activeEditor = tinymce.get(editorId);
+    syncTextareaFromEditor();
+    const activeEditor = tinymce.get(fragmentId);
     if (activeEditor) {
-      activeEditor.save();
       activeEditor.remove();
     }
     editor = null;
@@ -831,13 +828,11 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     activeI18n = resolveEditorI18n(nextI18n);
     const normalized = registerLegacyEditorI18n(tinymce, activeI18n.lang);
     if (normalized === editorLang) {
-      localizeLegacyMenubar(tinymce.get(editorId) || editor, activeI18n);
+      localizeLegacyMenubar(tinymce.get(fragmentId) || editor, activeI18n);
       return;
     }
     editorLang = normalized;
     if (mode !== "visual") return;
-    const activeEditor = tinymce.get(editorId);
-    activeEditor?.save();
     removeVisualEditor();
     await ensureVisualEditor();
   };
@@ -849,10 +844,12 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
       mode = "code";
       renderMode();
       textarea.focus();
+      syncTextareaFromCode();
       return;
     }
 
     mode = "visual";
+    syncFragmentFromTextarea();
     renderMode();
     await ensureVisualEditor();
     editor?.focus?.();
@@ -891,31 +888,38 @@ export async function createClassicEditor(config: ClassicEditorConfig): Promise<
     },
     insertHtml(html: string) {
       if (!html) return;
-      const activeEditor = tinymce.get(editorId);
+      const activeEditor = tinymce.get(fragmentId);
       if (mode === "visual" && activeEditor) {
         activeEditor.focus();
         activeEditor.selection.setContent(html);
-        activeEditor.save();
+        syncTextareaFromEditor();
         return;
       }
       insertAtCaret(textarea, html);
     },
     setContent(html: string) {
       textarea.value = html;
-      const activeEditor = tinymce.get(editorId);
+      const activeEditor = tinymce.get(fragmentId);
       if (mode === "visual" && activeEditor) {
         activeEditor.setContent(html || "");
-        activeEditor.save();
+        syncTextareaFromEditor();
+        return;
       }
+      syncFragmentFromTextarea();
     },
     syncToTextarea() {
-      const activeEditor = tinymce.get(editorId);
-      activeEditor?.save();
+      if (mode === "visual") {
+        syncTextareaFromEditor();
+        return;
+      }
+      syncTextareaFromCode();
     },
     async destroy() {
       removeVisualEditor();
       target.classList.remove("is-fullscreen");
       document.body.classList.remove("editor-fullscreen-active");
+      fragment.hidden = true;
+      textarea.hidden = false;
     },
   };
 }
@@ -942,7 +946,7 @@ export async function bootstrapClassicEditor(config: SharedEditorBootstrapConfig
     target,
     textarea,
     assetBaseUrl: getEndpoint(config.assetBaseUrl, DEFAULT_ASSET_BASE_URL),
-    styleProfileUrl: getEndpoint(config.styleProfileUrl, "/editor-style-profile.json"),
+    styleProfileUrl: config.styleProfileUrl ? getEndpoint(config.styleProfileUrl, "/editor-style-profile.json") : undefined,
     styleProfile: config.styleProfile,
     labels: config.labels,
     i18n: config.i18n,
