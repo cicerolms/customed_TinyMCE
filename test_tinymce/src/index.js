@@ -1,8 +1,11 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const HTML_HEADERS = { "content-type": "text/html; charset=utf-8" };
 const JS_HEADERS = { "content-type": "text/javascript; charset=utf-8" };
+const CSS_HEADERS = { "content-type": "text/css; charset=utf-8" };
 
-const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/refs/heads/main/dist/index.js";
+const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js";
+const DEFAULT_EDITOR_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-style.css";
+const DEFAULT_EDITOR_CONTENT_STYLE_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/editor-content.css";
 
 const EDITOR_MEDIA_LIBRARY = [
   {
@@ -133,6 +136,59 @@ async function fetchSharedEditorLib(env) {
   return new Response(code, {
     status: 200,
     headers: JS_HEADERS,
+  });
+}
+
+function sharedAssetHeaders() {
+  const headers = {
+    "User-Agent": "test-tinymce-editor",
+    Accept: "application/octet-stream",
+  };
+  return headers;
+}
+
+async function fetchSharedAsset(env, envVar, fallbackUrl) {
+  const assetUrl = env?.[envVar] || fallbackUrl;
+  if (!assetUrl) {
+    return null;
+  }
+
+  const token = env?.CICEROLMS_GH_TOKEN;
+  const headers = sharedAssetHeaders();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(assetUrl, {
+    headers,
+    cache: "no-store",
+  });
+  return response;
+}
+
+async function fetchSharedEditorStyle(env) {
+  const response = await fetchSharedAsset(env, "CICEROLMS_EDITOR_STYLE_URL", DEFAULT_EDITOR_STYLE_URL);
+  if (!response || !response.ok) {
+    const status = response?.status || 500;
+    return jsonResponse({ ok: false, error: `failed-editor-style-fetch:${status}` }, status);
+  }
+  const code = await response.text();
+  return new Response(code, {
+    status: 200,
+    headers: CSS_HEADERS,
+  });
+}
+
+async function fetchSharedEditorContentStyle(env) {
+  const response = await fetchSharedAsset(env, "CICEROLMS_EDITOR_CONTENT_STYLE_URL", DEFAULT_EDITOR_CONTENT_STYLE_URL);
+  if (!response || !response.ok) {
+    const status = response?.status || 500;
+    return jsonResponse({ ok: false, error: `failed-editor-content-style-fetch:${status}` }, status);
+  }
+  const code = await response.text();
+  return new Response(code, {
+    status: 200,
+    headers: CSS_HEADERS,
   });
 }
 
@@ -354,8 +410,7 @@ function pageShell({ title = "", content = "" } = {}) {
     <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/tinymce@7.8.0/tinymce.min.js" referrerpolicy="origin"></script>
-    <script type="module" src="/media-library.js"></script>
-    <script type="module" src="/editor-client.js"></script>
+    <script type="module" src="/editor-lib.js"></script>
   </body>
 </html>`;
 }
@@ -426,8 +481,7 @@ function cmsPageShell({ title = "", content = "" } = {}) {
     <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/tinymce@7.8.0/tinymce.min.js" referrerpolicy="origin"></script>
-    <script type="module" src="/media-library.js"></script>
-    <script type="module" src="/editor-client.js"></script>
+    <script type="module" src="/editor-lib.js"></script>
   </body>
 </html>`;
 }
@@ -535,6 +589,14 @@ export default {
 
       if (pathname === "/editor-lib.js" && request.method === "GET") {
         return fetchSharedEditorLib(env);
+      }
+
+      if (pathname === "/editor-style.css" && request.method === "GET") {
+        return fetchSharedEditorStyle(env);
+      }
+
+      if (pathname === "/editor-content.css" && request.method === "GET") {
+        return fetchSharedEditorContentStyle(env);
       }
 
       if (pathname === "/assets" || pathname.startsWith("/assets/") || pathname === "/favicon.ico") {

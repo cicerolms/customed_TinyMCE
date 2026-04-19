@@ -1,2 +1,5 @@
 node_modules/
 dist/
+.wrangler/
+test_tinymce/.wrangler/
+test_tinymce/.screenshots/

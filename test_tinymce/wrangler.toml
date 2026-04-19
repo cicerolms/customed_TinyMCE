@@ -8,7 +8,7 @@ directory = "public"
 binding = "ASSETS"
 
 [vars]
-CICEROLMS_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/refs/heads/main/dist/index.js"
+CICEROLMS_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js"
 
 [[d1_databases]]
 binding = "DB"

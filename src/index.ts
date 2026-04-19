@@ -38,6 +38,389 @@ export type ClassicEditorInstance = {
   destroy(): Promise<void>;
 };
 
+type OptionalNode = string | HTMLElement | null;
+
+type HtmxWindow = Window & {
+  htmx?: {
+    process?: (node: ParentNode) => void;
+  };
+};
+
+export type SharedEditorBootstrapConfig = {
+  target?: OptionalNode;
+  form?: OptionalNode;
+  saveUrl?: string;
+  confirmUrl?: string;
+  statusNode?: OptionalNode;
+  refreshButton?: OptionalNode;
+  confirmButton?: OptionalNode;
+  previewButton?: OptionalNode;
+  tinymceBaseUrl?: string;
+  tinymceVersion?: string;
+  styleProfileUrl?: string;
+  styleProfile?: EditorStyleProfile;
+  labels?: ClassicEditorLabels;
+  mediaEndpoint?: string;
+  mediaResultsEndpoint?: string;
+  backdropId?: string;
+  tinyMceGlobal?: any;
+};
+
+type SharedEditorState = {
+  editor: ClassicEditorInstance;
+  form: HTMLFormElement;
+  target: HTMLElement;
+  textArea: HTMLTextAreaElement;
+  codeTextArea: HTMLTextAreaElement;
+  submitField: HTMLTextAreaElement;
+  statusNode: HTMLElement;
+};
+
+type BootstrapStatusNode = {
+  status?: string;
+  error?: boolean;
+};
+
+function resolveNode(node: OptionalNode): HTMLElement | null {
+  if (!node) return null;
+  if (typeof node === 'string') {
+    if (typeof document === 'undefined') return null;
+    return document.querySelector(node);
+  }
+  return node;
+}
+
+function toTextArea(node: OptionalNode): HTMLTextAreaElement | null {
+  const element = resolveNode(node);
+  return element instanceof HTMLTextAreaElement ? element : null;
+}
+
+function getEndpoint(url: string | null | undefined, fallback: string): string {
+  return String(url || '').trim() || fallback;
+}
+
+function toHtmlFromMedia(dataset: DOMStringMap) {
+  const url = String(dataset.mediaUrl || '').trim();
+  if (!url) return "";
+  const title = String(dataset.mediaTitle || dataset.mediaFilename || "media").trim();
+  const alt = String(dataset.mediaAlt || title).trim();
+  const mimeType = String(dataset.mediaMime || '').trim();
+  const escapedUrl = url.replace(/"/g, "&quot;");
+  const escapedTitle = title.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char] || char));
+  const escapedAlt = alt.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] || char));
+
+  if (mimeType.startsWith("image/")) {
+    return `<img src="${escapedUrl}" alt="${escapedAlt}" />`;
+  }
+  return `<a href="${escapedUrl}">${escapedTitle}</a>`;
+}
+
+function getPayload(form: HTMLFormElement): Record<string, string> {
+  const payload: Record<string, string> = {};
+  const controls = Array.from(form.querySelectorAll("input, textarea, select, button"));
+  for (const control of controls) {
+    if (!(control instanceof HTMLInputElement) && !(control instanceof HTMLTextAreaElement) && !(control instanceof HTMLSelectElement)) {
+      continue;
+    }
+    const fieldName = control.name;
+    if (!fieldName || control.disabled) continue;
+    if (control instanceof HTMLInputElement && control.type === "file") continue;
+    payload[fieldName] = String(control.value || "");
+  }
+  return payload;
+}
+
+function pickFirstString(...values: Array<unknown>): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+async function saveEditorContent(form: HTMLFormElement, statusNode: HTMLElement, saveUrl: string): Promise<BootstrapStatusNode> {
+  const payload = getPayload(form);
+  payload.content = pickFirstString(payload.content, payload["content-visual"], payload["content-code"], payload["content-editor-code"], payload["content-editor"]);
+  if (!payload.content) {
+    const status = "Save blocked: content is empty.";
+    statusNode.textContent = status;
+    return { status, error: true };
+  }
+
+  const response = await fetch(saveUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const responseBody = await response.json().catch(() => ({}));
+  if (!response.ok || !responseBody.ok) {
+    const status = `Save failed: ${JSON.stringify(responseBody)}`;
+    statusNode.textContent = status;
+    return { status, error: true };
+  }
+
+  const status = `Saved at ${new Date().toISOString()}\npostId=${responseBody.id}\nCreatedAt=${responseBody.createdAt}`;
+  statusNode.textContent = status;
+  return { status, error: false };
+}
+
+async function loadLatestPost(confirmUrl: string, form: HTMLFormElement, statusNode: HTMLElement): Promise<BootstrapStatusNode> {
+  const response = await fetch(confirmUrl, { cache: "no-store" });
+  const responseBody = await response.json().catch(() => ({}));
+  if (!response.ok || !responseBody.ok || !responseBody.post) {
+    const status = `Reload failed: ${JSON.stringify(responseBody)}`;
+    statusNode.textContent = status;
+    return { status, error: true };
+  }
+
+  const post = responseBody.post;
+  const titleField = form.querySelector("#post-title");
+  const textArea = form.querySelector("[data-editor-visual], [data-editor-textarea]");
+  const codeTextarea = form.querySelector("[data-editor-code]");
+  const submitField = form.querySelector("[data-editor-submit-field]");
+  if (titleField instanceof HTMLInputElement) {
+    titleField.value = post.title || "";
+  }
+  if (textArea instanceof HTMLTextAreaElement) {
+    textArea.value = post.content || "";
+  }
+  if (codeTextarea instanceof HTMLTextAreaElement) {
+    codeTextarea.value = post.content || "";
+  }
+  if (submitField instanceof HTMLTextAreaElement) {
+    submitField.value = post.content || "";
+  }
+  const status = `Reloaded latest post id=${post.id}`;
+  statusNode.textContent = status;
+  return { status };
+}
+
+function openMediaModal(backdrop: HTMLElement, mediaUrl: string): void {
+  if (!mediaUrl || !backdrop || typeof fetch !== 'function') return;
+  fetch(mediaUrl, {
+    headers: { "x-requested-with": "fetch" },
+    cache: "no-store",
+  }).then(async (response) => {
+    if (!response.ok) return;
+    backdrop.innerHTML = await response.text();
+    backdrop.classList.remove("hidden");
+    backdrop.setAttribute("aria-hidden", "false");
+    const htmx = (window as HtmxWindow).htmx;
+    if (htmx?.process) {
+      htmx.process(backdrop);
+    }
+    const searchInput = backdrop.querySelector('input[name="keyword"]');
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+}
+
+function closeMediaModal(backdrop: HTMLElement): void {
+  backdrop.classList.add("hidden");
+  backdrop.innerHTML = '';
+  backdrop.setAttribute("aria-hidden", "true");
+}
+
+function bindMediaDelegates(backdrop: HTMLElement) {
+  document.addEventListener("click", (event) => {
+    const opener = event.target instanceof Element ? event.target.closest("[data-media-modal-open]") : null;
+    if (opener instanceof HTMLElement) {
+      event.preventDefault();
+      openMediaModal(backdrop, opener.getAttribute("data-media-modal-url") || "");
+      return;
+    }
+
+    const insertButton = event.target instanceof Element ? event.target.closest("[data-editor-media-insert]") : null;
+    if (insertButton instanceof HTMLElement && insertButton.dataset) {
+      event.preventDefault();
+      const html = toHtmlFromMedia(insertButton.dataset);
+      if (html) {
+        window.dispatchEvent(new CustomEvent("test-tinymce:media-insert", {
+          detail: { html },
+        }));
+      }
+      closeMediaModal(backdrop);
+      return;
+    }
+
+    const close = event.target instanceof Element ? event.target.closest(".modal-close,[data-modal-close]") : null;
+    if (close) {
+      closeMediaModal(backdrop);
+      return;
+    }
+
+    if (event.target instanceof HTMLElement && event.target.classList.contains("hidden")) {
+      closeMediaModal(backdrop);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeMediaModal(backdrop);
+    }
+  });
+}
+
+export async function bootstrapClassicEditor(config: SharedEditorBootstrapConfig = {}): Promise<SharedEditorState | null> {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const target = resolveNode(config.target || "[data-classic-editor]");
+  if (!(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  const tinyMceGlobal = config.tinyMceGlobal || (typeof window !== 'undefined' ? (window as any).tinymce : null);
+  if (!tinyMceGlobal) {
+    const fallback = document.querySelector("#save-status") || null;
+    if (fallback instanceof HTMLElement) {
+      fallback.textContent = "Editor bootstrap failed: missing TinyMCE global.";
+    }
+    return null;
+  }
+
+  const textarea = target.querySelector("[data-editor-visual], [data-editor-textarea]");
+  const codeTextarea = target.querySelector("[data-editor-code]");
+  const submitField = target.querySelector("[data-editor-submit-field]");
+  const visualTab = target.querySelector('[data-editor-tab="visual"]');
+  const codeTab = target.querySelector('[data-editor-tab="code"]');
+  const formElement = resolveNode(config.form || "#post-editor-form");
+
+  if (
+    !(textarea instanceof HTMLTextAreaElement)
+    || !(codeTextarea instanceof HTMLTextAreaElement)
+    || !(submitField instanceof HTMLTextAreaElement)
+    || !(formElement instanceof HTMLFormElement)
+  ) {
+    return null;
+  }
+
+  const statusNode = resolveNode(config.statusNode || "#save-status");
+  const statusTarget = statusNode instanceof HTMLElement ? statusNode : null;
+  if (!statusTarget) {
+    return null;
+  }
+
+  const editor = await createClassicEditor({
+    target,
+    textarea,
+    codeTextarea,
+    submitField,
+    tinyMceGlobal,
+    tinymceBaseUrl: getEndpoint(config.tinymceBaseUrl, "https://cdn.jsdelivr.net/npm/tinymce@7.8.0"),
+    tinymceVersion: getEndpoint(config.tinymceVersion, "7.8.0") || "7.8.0",
+    styleProfileUrl: getEndpoint(config.styleProfileUrl, "/editor-style-profile.json"),
+    styleProfile: config.styleProfile,
+    labels: {
+      source: "Source",
+      yellowHighlight: "Yellow Highlight",
+      searchPlaceholder: "Search text",
+      searchPrev: "Prev",
+      searchNext: "Next",
+      noResults: "No results",
+      ...config.labels,
+    },
+    mediaInsert: (html) => {
+      window.dispatchEvent(new CustomEvent("test-tinymce:media-insert", {
+        detail: { html },
+      }));
+    },
+  });
+
+  const state: SharedEditorState = {
+    editor,
+    form: formElement,
+    target,
+    textArea: textarea,
+    codeTextArea: codeTextarea,
+    submitField,
+    statusNode: statusTarget,
+  };
+
+  const selectMode = (mode: 'visual' | 'code') => editor.switchMode(mode);
+  visualTab?.addEventListener("click", (event) => {
+    event.preventDefault();
+    selectMode("visual");
+  });
+  codeTab?.addEventListener("click", (event) => {
+    event.preventDefault();
+    selectMode("code");
+  });
+  if (visualTab instanceof HTMLElement) {
+    visualTab.setAttribute("aria-pressed", "true");
+  }
+  if (codeTab instanceof HTMLElement) {
+    codeTab.setAttribute("aria-pressed", "false");
+  }
+  selectMode("visual");
+
+  const backdrop = resolveNode(config.backdropId ? `#${config.backdropId}` : "#modal-backdrop");
+  if (backdrop instanceof HTMLElement) {
+    bindMediaDelegates(backdrop);
+  }
+
+  state.form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveEditorContent(state.form, state.statusNode, getEndpoint(config.saveUrl, "/save"));
+  });
+
+  resolveNode(config.refreshButton || "#refresh")?.addEventListener("click", () => {
+    textarea.value = "";
+    codeTextarea.value = "";
+    submitField.value = "";
+    statusTarget.textContent = "Editor cleared.";
+  });
+
+  const confirmButton = resolveNode(config.confirmButton || "#confirm-latest");
+  confirmButton?.addEventListener("click", async () => {
+    await loadLatestPost(getEndpoint(config.confirmUrl, "/confirm"), state.form, state.statusNode);
+  });
+
+  const previewButton = resolveNode(config.previewButton || "#open-preview");
+  previewButton?.addEventListener("click", () => {
+    const htmlPayload = textarea.value.trim() || codeTextarea.value.trim() || "";
+    if (!htmlPayload) {
+      state.statusNode.textContent = "Preview is empty.";
+      return;
+    }
+    const encoded = encodeURIComponent(htmlPayload);
+    window.open(`data:text/html,${encoded}`, "_blank", "noopener");
+    state.statusNode.textContent = "Opening preview in a new tab.";
+  });
+
+  window.addEventListener("test-tinymce:media-insert", (event) => {
+    const html = (event as CustomEvent<{ html?: string }>)?.detail?.html;
+    if (!html) return;
+    editor.insertHtml(html);
+  });
+
+  return state;
+}
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined' && !(window as any).__cicerolmsClassicEditorAutoBootDone) {
+  (window as any).__cicerolmsClassicEditorAutoBootDone = true;
+  const boot = async () => {
+    if (!document.querySelector("[data-classic-editor]")) return;
+    if (!(window as any).tinymce) {
+      return;
+    }
+    await bootstrapClassicEditor({
+      tinyMceGlobal: (window as any).tinymce,
+    });
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      void boot();
+    }, { once: true });
+  } else {
+    void boot();
+  }
+}
+
 const DEFAULT_EDITOR_STYLE_PROFILE: Required<EditorStyleProfile> = {
   bodyClass: 'cms-editor-content',
   blockFormats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6;Preformatted=pre',

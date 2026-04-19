@@ -34,4 +34,35 @@ export type ClassicEditorInstance = {
     insertHtml(html: string): void;
     destroy(): Promise<void>;
 };
+type OptionalNode = string | HTMLElement | null;
+export type SharedEditorBootstrapConfig = {
+    target?: OptionalNode;
+    form?: OptionalNode;
+    saveUrl?: string;
+    confirmUrl?: string;
+    statusNode?: OptionalNode;
+    refreshButton?: OptionalNode;
+    confirmButton?: OptionalNode;
+    previewButton?: OptionalNode;
+    tinymceBaseUrl?: string;
+    tinymceVersion?: string;
+    styleProfileUrl?: string;
+    styleProfile?: EditorStyleProfile;
+    labels?: ClassicEditorLabels;
+    mediaEndpoint?: string;
+    mediaResultsEndpoint?: string;
+    backdropId?: string;
+    tinyMceGlobal?: any;
+};
+type SharedEditorState = {
+    editor: ClassicEditorInstance;
+    form: HTMLFormElement;
+    target: HTMLElement;
+    textArea: HTMLTextAreaElement;
+    codeTextArea: HTMLTextAreaElement;
+    submitField: HTMLTextAreaElement;
+    statusNode: HTMLElement;
+};
+export declare function bootstrapClassicEditor(config?: SharedEditorBootstrapConfig): Promise<SharedEditorState | null>;
 export declare function createClassicEditor(config: ClassicEditorConfig): Promise<ClassicEditorInstance>;
+export {};
