@@ -2,7 +2,7 @@ const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const HTML_HEADERS = { "content-type": "text/html; charset=utf-8" };
 const JS_HEADERS = { "content-type": "text/javascript; charset=utf-8" };
 
-const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js";
+const DEFAULT_EDITOR_LIB_URL = "https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/refs/heads/main/dist/index.js";
 
 const EDITOR_MEDIA_LIBRARY = [
   {

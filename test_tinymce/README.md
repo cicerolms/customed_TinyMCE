@@ -13,7 +13,7 @@ for an editable page and persists submitted content to D1.
 ## Local quick start
 
 1. The test worker serves a worker route `/editor-lib.js` that fetches the shared editor bundle from:
-   - `https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/main/dist/index.js`
+   - `https://raw.githubusercontent.com/cicerolms/customed_TinyMCE/refs/heads/main/dist/index.js`
    with a private GitHub token.
 2. Configure private token (required):
    - `wrangler secret put CICEROLMS_GH_TOKEN`
