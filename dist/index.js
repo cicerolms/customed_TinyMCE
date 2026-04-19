@@ -1,6 +1,6 @@
 const DEFAULT_ASSET_BASE_URL = "/assets";
-const LEGACY_EDITOR_VERSION = "20260411-cms-legacy-wp-editor-v1";
-const LEGACY_TOOLBAR_1 = "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,vietworklinkcard,forecolor,table,vietworkfullscreen";
+const LEGACY_EDITOR_VERSION = "20260419-classic-editor-shell-v1";
+const LEGACY_TOOLBAR_1 = "formatselect,fontsizeselect,bold,italic,removeformat,underline,blockquote,bullist,numlist,alignleft,aligncenter,alignright,link,unlink,undo,redo,pastetext,charmap,wp_more,classiceditorlinkcard,forecolor,table,classiceditorfullscreen";
 const LEGACY_VECB_PLUGIN_NAMES = Array.from({ length: 18 }, (_, index) => `vecb_button${index + 1}`);
 const LEGACY_UTILITY_BUTTON_NAMES = Array.from({ length: 5 }, (_, index) => `utility_${index + 1}`);
 const LEGACY_TOOLBAR_2 = [...LEGACY_VECB_PLUGIN_NAMES, ...LEGACY_UTILITY_BUTTON_NAMES].join(",");
@@ -195,7 +195,7 @@ export function dispatchClassicEditorI18n(nextI18n) {
     if (typeof document === "undefined") {
         return;
     }
-    document.dispatchEvent(new CustomEvent("cicerolms:editor-i18n-change", { detail: nextI18n }));
+    document.dispatchEvent(new CustomEvent("classic-editor:i18n-change", { detail: nextI18n }));
 }
 function defaultContentCssUrls(assetBaseUrl) {
     return [
@@ -298,11 +298,11 @@ function resolveEditorBodyClass(profile) {
 }
 function ensureLegacyWpGlobals(win) {
     if (typeof win.getUserSetting !== "function") {
-        win.getUserSetting = (name, fallback = "") => window.localStorage.getItem(`wp-user-setting:${name}`) ?? fallback;
+        win.getUserSetting = (name, fallback = "") => window.localStorage.getItem(`classic-editor-user-setting:${name}`) ?? fallback;
     }
     if (typeof win.setUserSetting !== "function") {
         win.setUserSetting = (name, value) => {
-            window.localStorage.setItem(`wp-user-setting:${name}`, String(value));
+            window.localStorage.setItem(`classic-editor-user-setting:${name}`, String(value));
             return value;
         };
     }
@@ -559,7 +559,7 @@ function bindMediaDelegates(backdrop) {
             event.preventDefault();
             const html = buildInsertHtml(insertButton.dataset);
             if (html) {
-                window.dispatchEvent(new CustomEvent("cicerolms:media-insert", { detail: { html } }));
+                window.dispatchEvent(new CustomEvent("classic-editor:media-insert", { detail: { html } }));
             }
             closeMediaModal(backdrop);
             return;
@@ -664,7 +664,7 @@ export async function createClassicEditor(config) {
             file: { title: translate("editor.menu.file", "ファイル", activeI18n), items: "newdocument | print" },
             edit: { title: translate("editor.menu.edit", "編集", activeI18n), items: "undo redo | cut copy paste pastetext | selectall | searchreplace" },
             view: { title: translate("editor.menu.view", "表示", activeI18n), items: "code | visualaid visualchars visualblocks | fullscreen" },
-            insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | vietworkaddmedia wp_more wp_page" },
+            insert: { title: translate("editor.menu.insert", "挿入", activeI18n), items: "link media | inserttable charmap hr nonbreaking anchor insertdatetime | classiceditoraddmedia wp_more wp_page" },
             format: { title: translate("editor.menu.format", "フォーマット", activeI18n), items: "bold italic underline strikethrough | superscript subscript codeformat | blockformats align | removeformat | tmaresettablesize tmaremovetablestyles" },
             tools: { title: translate("editor.menu.tools", "ツール", activeI18n), items: "code" },
             table: { title: translate("editor.menu.table", "テーブル", activeI18n), items: "inserttable tableprops deletetable | row column cell" },
@@ -674,7 +674,7 @@ export async function createClassicEditor(config) {
             localizeLegacyMenubar(instance, activeI18n);
         },
         setup(instance) {
-            instance.addMenuItem("vietworkaddmedia", {
+            instance.addMenuItem("classiceditoraddmedia", {
                 text: translate("editor.insert.addMedia", label(labels, "addMedia", "メディアを追加"), activeI18n),
                 icon: "media",
                 context: "insert",
@@ -685,14 +685,14 @@ export async function createClassicEditor(config) {
                     }
                 },
             });
-            instance.addButton("vietworklinkcard", {
+            instance.addButton("classiceditorlinkcard", {
                 tooltip: translate("editor.linkCard.button", "Insert Linkcard", activeI18n),
                 image: `${assetBaseUrl}/vendor/pz-linkcard/mce-button.png`,
                 onclick() {
                     openLinkCardDialog(instance, assetBaseUrl);
                 },
             });
-            instance.addButton("vietworkfullscreen", {
+            instance.addButton("classiceditorfullscreen", {
                 tooltip: translate("editor.fullscreen.writer", "Distraction-free writing mode", activeI18n),
                 icon: "fullscreen",
                 onclick() {
@@ -777,7 +777,7 @@ export async function createClassicEditor(config) {
         const nextI18n = readEditorI18nDetail(event);
         void applyI18n(nextI18n);
     });
-    document.addEventListener("cicerolms:editor-i18n-change", (event) => {
+    document.addEventListener("classic-editor:i18n-change", (event) => {
         const nextI18n = readEditorI18nDetail(event);
         void applyI18n(nextI18n);
     });
@@ -885,7 +885,7 @@ export async function bootstrapClassicEditor(config = {}) {
         window.open(`data:text/html,${encoded}`, "_blank", "noopener");
         state.statusNode.textContent = "Opening preview in a new tab.";
     });
-    window.addEventListener("cicerolms:media-insert", (event) => {
+    window.addEventListener("classic-editor:media-insert", (event) => {
         const html = event.detail?.html;
         if (html) {
             state.editor.insertHtml(html);
@@ -893,8 +893,8 @@ export async function bootstrapClassicEditor(config = {}) {
     });
     return state;
 }
-if (typeof window !== "undefined" && typeof document !== "undefined" && !window.__cicerolmsLegacyEditorAutoBootDone) {
-    window.__cicerolmsLegacyEditorAutoBootDone = true;
+if (typeof window !== "undefined" && typeof document !== "undefined" && !window.__classicEditorAutoBootDone) {
+    window.__classicEditorAutoBootDone = true;
     const boot = async () => {
         if (!document.querySelector("[data-classic-editor]"))
             return;

@@ -1,6 +1,6 @@
 {
-  "name": "@cicerolms/vietwork-classic-editor",
-  "version": "0.1.2",
+  "name": "classic-editor-shell",
+  "version": "0.1.3",
   "description": "Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects",
   "type": "module",
   "main": "./dist/index.js",

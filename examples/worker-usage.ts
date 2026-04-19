@@ -1,4 +1,4 @@
-import { createClassicEditor } from '@cicerolms/vietwork-classic-editor';
+import { createClassicEditor } from 'classic-editor-shell';
 
 async function boot() {
   const root = document.querySelector('[data-classic-editor]');

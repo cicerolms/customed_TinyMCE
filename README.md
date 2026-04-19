@@ -1,4 +1,4 @@
-# customed_TinyMCE
+# classic-editor-shell
 
 Reusable classic TinyMCE editor shell for Cloudflare Worker SSR projects.
 
@@ -14,17 +14,16 @@ This package provides a reusable classic TinyMCE editing stack for SSR projects:
 - Shared Tailwind-authored app CSS asset for consuming workers
 - Explicit i18n hooks so consuming apps can switch locale in the frontend
 
-## Public repo
+## Package
 
-- GitHub: `https://github.com/cicerolms/customed_TinyMCE`
-- Package name: `@cicerolms/vietwork-classic-editor`
+- Package name: `classic-editor-shell`
 
 ## Quick start
 
 Install the shared editor in your app:
 
 ```bash
-npm install github:cicerolms/customed_TinyMCE
+npm install github:your-org/classic-editor-shell
 ```
 
 Import it in your browser entry:
@@ -33,7 +32,7 @@ Import it in your browser entry:
 import {
   bootstrapClassicEditor,
   dispatchClassicEditorI18n,
-} from "@cicerolms/vietwork-classic-editor";
+} from "classic-editor-shell";
 
 await bootstrapClassicEditor({
   assetBaseUrl: "/assets",
@@ -72,7 +71,7 @@ import {
   bootstrapClassicEditor,
   createClassicEditor,
   dispatchClassicEditorI18n,
-} from '@cicerolms/vietwork-classic-editor';
+} from 'classic-editor-shell';
 ```
 
 Main exports:
@@ -83,10 +82,10 @@ Main exports:
 
 Package asset exports:
 
-- `@cicerolms/vietwork-classic-editor/styles.css`
-- `@cicerolms/vietwork-classic-editor/editor-style-self.css`
-- `@cicerolms/vietwork-classic-editor/tailwind.css`
-- `@cicerolms/vietwork-classic-editor/tailwind-preset`
+- `classic-editor-shell/styles.css`
+- `classic-editor-shell/editor-style-self.css`
+- `classic-editor-shell/tailwind.css`
+- `classic-editor-shell/tailwind-preset`
 
 Initialize with:
 
@@ -163,7 +162,6 @@ dispatchClassicEditorI18n({
 
 Compatibility:
 
-- legacy `document.dispatchEvent(new CustomEvent("vietwork:i18n-applied", { detail: { lang } }))` still works.
 - `window.__i18n` is still used as a fallback when no explicit `i18n` config is provided.
 - The documented contract is now `i18n`, `setLocale`, `setI18n`, and `dispatchClassicEditorI18n`.
 
